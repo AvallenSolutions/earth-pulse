@@ -92,6 +92,15 @@ Full plan: [PLAN.md](../PLAN.md).
 - [x] Disaster history layer: GDACS archive, 1,027 events (2000-2026, 272KB;
       floods throughout, wildfires only from ~2022), click popups
 - [x] Layers panel split into "Live now" / "History · follows the year slider"
+- [x] FUTURES: CMIP6 temperature projections per country (191 countries,
+      2026-2100, 3 scenarios: SSP1-2.6/SSP2-4.5/SSP5-8.5) via World Bank
+      CCKP, delta-method anchored to observed ERA5 2015-2024; map slider
+      extends to 2100 with scenario chips + projected badge; country pages
+      get "The future under three scenarios" fan chart; scenario in URL
+- [ ] Futures for more fields (published sources only): WRI Aqueduct water
+      stress (2030/50/80), CCKP precipitation, curated IPCC global tables
+      (sea level, warming), OECD plastics; energy/EVs regional (IEA);
+      no credible free per-country source for forest loss/Red List/PM2.5
 - [ ] DEPLOY: awaiting Tim's express permission
 
 ## Review

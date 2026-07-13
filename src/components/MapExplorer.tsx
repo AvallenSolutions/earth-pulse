@@ -46,13 +46,31 @@ type Hover = {
   top: number;
 };
 
+/** Metrics with published scenario projections (CMIP6 via World Bank CCKP). */
+const PROJECTIONS: Record<string, { firstYear: number; lastYear: number }> = {
+  temperature_anomaly: { firstYear: 2026, lastYear: 2100 },
+};
+const SCENARIOS = [
+  { id: "ssp126", label: "Low", detail: "SSP1-2.6", colour: "#199e70" },
+  { id: "ssp245", label: "Middle", detail: "SSP2-4.5", colour: "#e0a355" },
+  { id: "ssp585", label: "High", detail: "SSP5-8.5", colour: "#e66767" },
+] as const;
+type ScenarioId = (typeof SCENARIOS)[number]["id"];
+
 const choroplethCache = new Map<string, Record<string, number>>();
 const seriesCache = new Map<string, SeriesFile>();
 
-async function fetchChoropleth(metric: string, year: number) {
-  const key = `${metric}/${year}`;
+async function fetchChoropleth(
+  metric: string,
+  year: number,
+  scenario?: ScenarioId
+) {
+  const key = scenario ? `${metric}/${scenario}/${year}` : `${metric}/${year}`;
   if (!choroplethCache.has(key)) {
-    const res = await fetch(`/data/choropleth/${key}.json`);
+    const url = scenario
+      ? `/data/projections/${metric}/${scenario}/${year}.json`
+      : `/data/choropleth/${metric}/${year}.json`;
+    const res = await fetch(url);
     choroplethCache.set(key, res.ok ? await res.json() : {});
   }
   return choroplethCache.get(key)!;
@@ -73,6 +91,7 @@ export function MapExplorer({
   initialMetric,
   initialYear,
   initialView,
+  initialScenario,
 }: {
   metrics: Metric[];
   countries: Country[];
@@ -80,6 +99,7 @@ export function MapExplorer({
   initialMetric?: string;
   initialYear?: number;
   initialView?: string;
+  initialScenario?: string;
 }) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -88,12 +108,19 @@ export function MapExplorer({
     metrics.some((m) => m.id === initialMetric) ? initialMetric! : metrics[0].id
   );
   const metric = metrics.find((m) => m.id === metricId)!;
-  const [year, setYear] = useState(() =>
-    initialYear
-      ? Math.min(Math.max(initialYear, metric.firstYear), metric.lastYear)
-      : metric.lastYear
-  );
+  const [year, setYear] = useState(() => {
+    const projLast =
+      PROJECTIONS[metric.id]?.lastYear ?? metric.lastYear;
+    return initialYear
+      ? Math.min(Math.max(initialYear, metric.firstYear), projLast)
+      : metric.lastYear;
+  });
   const [globeOn, setGlobeOn] = useState(initialView !== "flat");
+  const [scenario, setScenario] = useState<ScenarioId>(
+    SCENARIOS.some((sc) => sc.id === initialScenario)
+      ? (initialScenario as ScenarioId)
+      : "ssp245"
+  );
   const [playing, setPlaying] = useState(false);
   const [hover, setHover] = useState<Hover | null>(null);
   const [popup, setPopup] = useState<
@@ -352,8 +379,13 @@ export function MapExplorer({
     const map = mapRef.current;
     if (!map || !mapReady) return;
     let alive = true;
+    const isProjected = !!PROJECTIONS[metric.id] && year > metric.lastYear;
     (async () => {
-      const values = await fetchChoropleth(metric.id, year);
+      const values = await fetchChoropleth(
+        metric.id,
+        year,
+        isProjected ? scenario : undefined
+      );
       if (!alive) return;
       valuesRef.current = values;
       const painted = paintedIso.current;
@@ -382,7 +414,7 @@ export function MapExplorer({
     return () => {
       alive = false;
     };
-  }, [metric, year, mapReady]);
+  }, [metric, year, scenario, mapReady]);
 
   // Satellite imagery layer (NASA GIBS, keyless). Sits beneath the country
   // fills; the choropleth hides while imagery is on but hover/click stay live.
@@ -429,8 +461,10 @@ export function MapExplorer({
       year: String(year),
       view: globeOn ? "globe" : "flat",
     });
+    if (PROJECTIONS[metricId] && year > (metrics.find((m) => m.id === metricId)?.lastYear ?? Infinity))
+      params.set("scenario", scenario);
     window.history.replaceState(null, "", `?${params.toString()}`);
-  }, [metricId, year, globeOn]);
+  }, [metricId, year, globeOn, scenario, metrics]);
 
   // Active fires layer (NASA FIRMS via our proxy so the key stays server-side)
   useEffect(() => {
@@ -996,12 +1030,13 @@ export function MapExplorer({
     };
   }, [mapReady, globeOn, playing, popup]);
 
-  // Play/animate the timeline
+  // Play/animate the timeline (plays through into the projected years)
   useEffect(() => {
     if (!playing) return;
+    const playLast = PROJECTIONS[metric.id]?.lastYear ?? metric.lastYear;
     const t = setInterval(() => {
       setYear((y) => {
-        if (y >= metric.lastYear) {
+        if (y >= playLast) {
           setPlaying(false);
           return y;
         }
@@ -1013,8 +1048,13 @@ export function MapExplorer({
 
   // Prefetch nearby years so scrubbing is smooth
   useEffect(() => {
-    for (let y = year + 1; y <= Math.min(year + 5, metric.lastYear); y++) {
-      fetchChoropleth(metric.id, y);
+    const projLast = PROJECTIONS[metric.id]?.lastYear ?? metric.lastYear;
+    for (let y = year + 1; y <= Math.min(year + 5, projLast); y++) {
+      fetchChoropleth(
+        metric.id,
+        y,
+        y > metric.lastYear ? scenario : undefined
+      );
       if (stormsOn && !stormsCache.has(y))
         fetch(`/data/storms/${y}.json`)
           .then((r) => (r.ok ? r.json().then((j) => stormsCache.set(y, j)) : undefined))
@@ -1028,11 +1068,14 @@ export function MapExplorer({
           .then((r) => (r.ok ? r.json().then((j) => disHistCache.set(y, j)) : undefined))
           .catch(() => {});
     }
-  }, [metric, year, stormsOn, quakeHistOn, disHistOn]);
+  }, [metric, year, scenario, stormsOn, quakeHistOn, disHistOn]);
 
   const domains = [...new Set(metrics.map((m) => m.domain))];
   const sliderMin = metric.firstYear;
-  const sliderMax = metric.lastYear;
+  const projection = PROJECTIONS[metric.id];
+  const sliderMax = projection ? projection.lastYear : metric.lastYear;
+  const isProjectedYear = !!projection && year > metric.lastYear;
+  const scenarioMeta = SCENARIOS.find((sc) => sc.id === scenario)!;
 
   const legendColours = rampColours(metric.scaleType, metric.ramp);
   const accent = accentFor(metric.scaleType, metric.ramp);
@@ -1353,24 +1396,77 @@ export function MapExplorer({
               </svg>
             )}
           </button>
-          <input
-            type="range"
-            min={sliderMin}
-            max={sliderMax}
-            value={year}
-            onChange={(e) => {
-              setPlaying(false);
-              setYear(Number(e.target.value));
-            }}
-            className="ep-slider w-full"
-            aria-label="Year"
-          />
-          <div className="w-14 shrink-0 text-right text-lg font-semibold tabular-nums text-white">
-            {year}
+          <div className="relative w-full">
+            <input
+              type="range"
+              min={sliderMin}
+              max={sliderMax}
+              value={year}
+              onChange={(e) => {
+                setPlaying(false);
+                setYear(Number(e.target.value));
+              }}
+              className="ep-slider w-full"
+              aria-label="Year"
+            />
+            {projection && (
+              <div
+                className="pointer-events-none absolute top-1/2 h-3.5 w-px -translate-y-1/2 bg-white/40"
+                style={{
+                  left: `${((metric.lastYear - sliderMin) / (sliderMax - sliderMin)) * 100}%`,
+                }}
+                aria-hidden="true"
+              />
+            )}
+          </div>
+          <div className="w-16 shrink-0 text-right">
+            <div
+              className="text-lg font-semibold tabular-nums"
+              style={{ color: isProjectedYear ? scenarioMeta.colour : "#ffffff" }}
+            >
+              {year}
+            </div>
+            {isProjectedYear && (
+              <div className="-mt-1 text-[9px] uppercase tracking-wide text-[#898781]">
+                projected
+              </div>
+            )}
           </div>
         </div>
-        <div className="mt-1 flex justify-between text-[10px] tabular-nums text-[#898781]">
+        <div className="mt-1 flex items-center justify-between text-[10px] tabular-nums text-[#898781]">
           <span>{sliderMin}</span>
+          {projection ? (
+            <span className="flex items-center gap-2">
+              <span>‹ observed to {metric.lastYear}</span>
+              <span className="flex gap-1">
+                {SCENARIOS.map((sc) => (
+                  <button
+                    key={sc.id}
+                    onClick={() => {
+                      setScenario(sc.id);
+                      if (year <= metric.lastYear) setYear(2050);
+                    }}
+                    aria-pressed={scenario === sc.id}
+                    title={`${sc.detail} emissions scenario`}
+                    className={`rounded-full border px-2 py-0.5 transition-colors ${
+                      scenario === sc.id
+                        ? "border-white/30 bg-white/10 text-white"
+                        : "border-white/10 text-[#898781] hover:text-[#c3c2b7]"
+                    }`}
+                  >
+                    <span
+                      className="mr-1 inline-block h-1.5 w-1.5 rounded-full"
+                      style={{ background: sc.colour }}
+                    />
+                    {sc.label}
+                  </button>
+                ))}
+              </span>
+              <span>CMIP6 projections ›</span>
+            </span>
+          ) : (
+            <span>{metric.unit}</span>
+          )}
           <span>{sliderMax}</span>
         </div>
       </div>

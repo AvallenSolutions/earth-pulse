@@ -16,6 +16,12 @@ import {
 
 const dataDir = join(process.cwd(), "public", "data");
 
+const FUTURE_SCENARIOS = [
+  { id: "ssp126", label: "Low · SSP1-2.6", colour: "#199e70" },
+  { id: "ssp245", label: "Middle · SSP2-4.5", colour: "#e0a355" },
+  { id: "ssp585", label: "High · SSP5-8.5", colour: "#e66767" },
+];
+
 function load<T>(rel: string): T {
   return JSON.parse(readFileSync(join(dataDir, rel), "utf8")) as T;
 }
@@ -141,6 +147,31 @@ export default async function CountryPage({
     .map((id) => charts.find((c) => c.metric.id === id))
     .filter(Boolean) as typeof charts;
 
+  // CMIP6 temperature futures under three scenarios
+  const observedTemp = seriesByMetric["temperature_anomaly"]?.[iso3];
+  const futures =
+    observedTemp && observedTemp.length > 1
+      ? FUTURE_SCENARIOS.map((sc) => {
+          const file = join(
+            dataDir,
+            "projections",
+            "temperature_anomaly",
+            `series_${sc.id}.json`
+          );
+          if (!existsSync(file)) return null;
+          const points = (
+            JSON.parse(readFileSync(file, "utf8")) as SeriesFile
+          )[iso3];
+          return points && points.length > 1
+            ? { label: sc.label, colour: sc.colour, points }
+            : null;
+        }).filter(Boolean) as {
+          label: string;
+          colour: string;
+          points: [number, number][];
+        }[]
+      : [];
+
   // Same-region countries for quick comparison
   const neighbours = country.region
     ? countries
@@ -204,6 +235,44 @@ export default async function CountryPage({
               );
             })}
           </div>
+        )}
+
+        {futures.length > 0 && observedTemp && (
+          <section className="mt-8">
+            <h2 className="mb-4 text-xs font-medium uppercase tracking-wide text-[#898781]">
+              The future under three scenarios
+            </h2>
+            <div className="rounded-xl border border-white/10 bg-[#1a1a19] p-4">
+              <div className="flex items-baseline justify-between gap-2">
+                <h3 className="text-sm font-medium">
+                  Temperature vs 1991-2020, observed and projected to 2100
+                </h3>
+              </div>
+              <div className="mt-3">
+                <LineChart
+                  points={observedTemp}
+                  unit="°C vs 1991-2020"
+                  colour={accentFor("diverging", "temp")}
+                  overlays={futures}
+                />
+              </div>
+              <p className="mt-2 text-xs leading-snug text-[#898781]">
+                Solid line: observed (Copernicus ERA5). Dashed lines: CMIP6
+                multi-model median under three IPCC emissions scenarios,
+                anchored to the observed 2015-2024 average, from the{" "}
+                <a
+                  href="https://climateknowledgeportal.worldbank.org/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[#6da7ec] hover:underline"
+                >
+                  World Bank Climate Change Knowledge Portal
+                </a>
+                . Scenarios are futures the world can still choose between, not
+                predictions.
+              </p>
+            </div>
+          </section>
         )}
 
         {charts.length === 0 && (

@@ -16,12 +16,15 @@ export function LineChart({
   unit,
   colour = "#3987e5",
   compare,
+  overlays,
   height = 200,
 }: {
   points: [number, number][];
   unit: string;
   colour?: string;
   compare?: { label: string; points: [number, number][] };
+  /** Extra series (e.g. scenario projections), dashed and direct-labelled. */
+  overlays?: { label: string; points: [number, number][]; colour: string }[];
   height?: number;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -30,10 +33,12 @@ export function LineChart({
   const width = 640;
 
   const pad = { l: 48, r: 14, t: 16, b: 22 };
-  const xs = points.map((p) => p[0]);
+  const overlayPts = overlays?.flatMap((o) => o.points) ?? [];
+  const xs = [...points.map((p) => p[0]), ...overlayPts.map((p) => p[0])];
   const allYs = [
     ...points.map((p) => p[1]),
     ...(compare?.points.map((p) => p[1]) ?? []),
+    ...overlayPts.map((p) => p[1]),
   ];
   const x0 = Math.min(...xs);
   const x1 = Math.max(...xs);
@@ -187,6 +192,27 @@ export function LineChart({
             opacity="0.9"
           />
         )}
+        {overlays?.map((o) => (
+          <g key={o.label}>
+            <path
+              d={pathOf(o.points)}
+              fill="none"
+              stroke={o.colour}
+              strokeWidth="1.8"
+              strokeDasharray="5 3"
+              opacity="0.9"
+            />
+            <text
+              x={Math.min(px(o.points[o.points.length - 1][0]), width - 2)}
+              y={py(o.points[o.points.length - 1][1]) - 4}
+              textAnchor="end"
+              fontSize="9"
+              fill={o.colour}
+            >
+              {o.label}
+            </text>
+          </g>
+        ))}
         <path
           d={d}
           fill="none"

@@ -1,0 +1,1 @@
+{"scenarios":["ssp126","ssp245","ssp585"],"firstYear":2026,"lastYear":2100,"source":"CMIP6 multi-model median via World Bank CCKP","method":"Delta method: modelled change vs the ensemble's 2015-2024 mean, added to the observed ERA5 anomaly mean for 2015-2024 (baseline 1991-2020)."}
