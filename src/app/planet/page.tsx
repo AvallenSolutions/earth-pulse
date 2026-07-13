@@ -3,6 +3,7 @@ import { join } from "node:path";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { LineChart } from "@/components/LineChart";
+import { accentFor } from "@/lib/colors";
 import { formatValue, type Country, type Metric, type SeriesFile } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -66,7 +67,11 @@ export default function PlanetPage() {
                   </span>
                 </div>
                 <div className="mt-3">
-                  <LineChart points={points} unit={metric.unit} />
+                  <LineChart
+                    points={points}
+                    unit={metric.unit}
+                    colour={accentFor(metric.scaleType, metric.ramp)}
+                  />
                 </div>
                 <p className="mt-2 text-xs leading-snug text-[#898781]">
                   {metric.explainer}{" "}

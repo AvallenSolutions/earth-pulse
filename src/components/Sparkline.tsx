@@ -6,11 +6,13 @@ export function Sparkline({
   year,
   width,
   height,
+  colour = "#3987e5",
 }: {
   points: [number, number][];
   year: number;
   width: number;
   height: number;
+  colour?: string;
 }) {
   const xs = points.map((p) => p[0]);
   const ys = points.map((p) => p[1]);
@@ -29,12 +31,12 @@ export function Sparkline({
   );
   return (
     <svg width={width} height={height} aria-hidden="true">
-      <path d={d} fill="none" stroke="#3987e5" strokeWidth="1.5" />
+      <path d={d} fill="none" stroke={colour} strokeWidth="1.5" />
       <circle
         cx={px(current[0])}
         cy={py(current[1])}
         r="3"
-        fill="#3987e5"
+        fill={colour}
         stroke="#1a1a19"
         strokeWidth="1.5"
       />

@@ -9,7 +9,7 @@ export type Metric = {
   scale: [number, number];
   scaleType: "sequential" | "diverging";
   stops?: number[];
-  flipDiverging?: boolean;
+  ramp?: string;
   global?: boolean;
   firstYear: number;
   lastYear: number;

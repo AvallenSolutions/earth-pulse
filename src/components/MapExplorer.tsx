@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { NO_DATA, scaleStops, SEQUENTIAL, DIVERGING } from "@/lib/colors";
+import { NO_DATA, scaleStops, rampColours, accentFor } from "@/lib/colors";
 import { DOMAIN_LABELS, formatValue, type Country, type Metric, type SeriesFile } from "@/lib/types";
 import type { Vitals } from "@/lib/vitals";
 import { Sparkline } from "./Sparkline";
@@ -138,6 +138,24 @@ export function MapExplorer({
 
     map.on("error", (e) => console.error("[map error]", e.error?.message ?? e));
     map.on("load", async () => {
+      // NASA Blue Marble shaded relief + bathymetry: the terrain the data
+      // sits on. Keyless, static, cached hard by GIBS.
+      map.addSource("bluemarble", {
+        type: "raster",
+        tiles: [
+          "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg",
+        ],
+        tileSize: 256,
+        maxzoom: 8,
+        attribution:
+          'Terrain: <a href="https://earthdata.nasa.gov/gibs">NASA Blue Marble</a>',
+      });
+      map.addLayer({
+        id: "bluemarble",
+        type: "raster",
+        source: "bluemarble",
+        paint: { "raster-opacity": 1, "raster-saturation": -0.25, "raster-brightness-max": 0.85 },
+      });
       const world = await (await fetch("/data/world.geo.json")).json();
       map.addSource("countries", {
         type: "geojson",
@@ -148,13 +166,13 @@ export function MapExplorer({
         id: "country-fills",
         type: "fill",
         source: "countries",
-        paint: { "fill-color": NO_DATA, "fill-opacity": 1 },
+        paint: { "fill-color": NO_DATA, "fill-opacity": 0.75 },
       });
       map.addLayer({
         id: "country-borders",
         type: "line",
         source: "countries",
-        paint: { "line-color": "#0a1420", "line-width": 0.75 },
+        paint: { "line-color": "rgba(5, 10, 18, 0.65)", "line-width": 0.75 },
       });
       // Soft glow beneath the crisp hover outline
       map.addLayer({
@@ -265,12 +283,7 @@ export function MapExplorer({
           "interpolate",
           ["linear"],
           ["feature-state", "value"],
-          ...scaleStops(
-            metric.scaleType,
-            metric.scale,
-            metric.stops,
-            metric.flipDiverging
-          ),
+          ...scaleStops(metric.scaleType, metric.scale, metric.stops, metric.ramp),
         ],
       ]);
       // keep the tooltip's value in sync if a country is hovered
@@ -304,11 +317,11 @@ export function MapExplorer({
         "country-fills"
       );
     }
-    map.setPaintProperty("country-fills", "fill-opacity", satOn ? 0 : 1);
+    map.setPaintProperty("country-fills", "fill-opacity", satOn ? 0 : 0.75);
     map.setPaintProperty(
       "country-borders",
       "line-color",
-      satOn ? "rgba(255,255,255,0.25)" : "#0a1420"
+      satOn ? "rgba(255,255,255,0.25)" : "rgba(5, 10, 18, 0.65)"
     );
   }, [satOn, satDate, mapReady]);
 
@@ -447,13 +460,8 @@ export function MapExplorer({
   const sliderMin = metric.firstYear;
   const sliderMax = metric.lastYear;
 
-  const divergingRun = [...DIVERGING.cool, DIVERGING.mid, ...DIVERGING.warm];
-  const legendColours =
-    metric.scaleType === "sequential"
-      ? SEQUENTIAL
-      : metric.flipDiverging
-        ? [...divergingRun].reverse()
-        : divergingRun;
+  const legendColours = rampColours(metric.scaleType, metric.ramp);
+  const accent = accentFor(metric.scaleType, metric.ramp);
 
   const onSelectCountry = useCallback((c: Country) => {
     window.location.href = `/country/${c.iso3}`;
@@ -713,6 +721,7 @@ export function MapExplorer({
                 year={year}
                 height={36}
                 width={200}
+                colour={accent}
               />
               <div className="mt-0.5 flex justify-between text-[10px] tabular-nums text-[#898781]">
                 <span>{series[hover.iso3][0][0]}</span>

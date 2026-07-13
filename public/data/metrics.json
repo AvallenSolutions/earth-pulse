@@ -22,6 +22,7 @@
       6000,
       12000
     ],
+    "ramp": "ember",
     "firstYear": 1750,
     "lastYear": 2024
   },
@@ -38,6 +39,7 @@
       20
     ],
     "scaleType": "sequential",
+    "ramp": "ember",
     "firstYear": 1750,
     "lastYear": 2024
   },
@@ -54,6 +56,7 @@
       2.5
     ],
     "scaleType": "diverging",
+    "ramp": "temp",
     "firstYear": 1940,
     "lastYear": 2025
   },
@@ -70,6 +73,7 @@
       60
     ],
     "scaleType": "sequential",
+    "ramp": "greens",
     "firstYear": 1965,
     "lastYear": 2024
   },
@@ -86,6 +90,7 @@
       100
     ],
     "scaleType": "sequential",
+    "ramp": "amber",
     "firstYear": 1965,
     "lastYear": 2024
   },
@@ -112,6 +117,7 @@
       60000,
       100000
     ],
+    "ramp": "violet",
     "firstYear": 1965,
     "lastYear": 2024
   },
@@ -138,6 +144,7 @@
       600,
       1500
     ],
+    "ramp": "ember",
     "firstYear": 1850,
     "lastYear": 2024
   },
@@ -164,6 +171,7 @@
       1500000,
       4000000
     ],
+    "ramp": "loss",
     "firstYear": 2001,
     "lastYear": 2024
   },
@@ -180,6 +188,7 @@
       100
     ],
     "scaleType": "sequential",
+    "ramp": "greens",
     "firstYear": 1990,
     "lastYear": 2025
   },
@@ -206,6 +215,7 @@
       20000,
       300000
     ],
+    "ramp": "reds",
     "firstYear": 2000,
     "lastYear": 2021
   },
@@ -283,6 +293,7 @@
       300,
       1000
     ],
+    "ramp": "teal",
     "firstYear": 2000,
     "lastYear": 2022
   },
@@ -309,6 +320,7 @@
       40000,
       100000
     ],
+    "ramp": "teal",
     "firstYear": 1961,
     "lastYear": 2022
   },
@@ -325,6 +337,7 @@
       100
     ],
     "scaleType": "sequential",
+    "ramp": "teal",
     "firstYear": 2000,
     "lastYear": 2024
   },
@@ -351,6 +364,7 @@
       2000,
       3000
     ],
+    "ramp": "blues",
     "firstYear": 1940,
     "lastYear": 2025
   },
@@ -361,13 +375,13 @@
     "domain": "water",
     "source": "Derived from Copernicus ERA5 precipitation via Our World in Data",
     "sourceUrl": "https://ourworldindata.org/grapher/average-precipitation-per-year",
-    "explainer": "How much wetter (blue) or drier (red) a country's year was compared with its 1961-1990 average. A simple drought and deluge signal.",
+    "explainer": "How much wetter (teal) or drier (brown) a country's year was compared with its 1961-1990 average. A simple drought and deluge signal.",
     "scale": [
       -50,
       50
     ],
     "scaleType": "diverging",
-    "flipDiverging": true,
+    "ramp": "rain",
     "firstYear": 1940,
     "lastYear": 2025
   },

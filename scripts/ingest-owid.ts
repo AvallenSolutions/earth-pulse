@@ -227,7 +227,7 @@ async function main() {
         scale: m.scale,
         scaleType: m.scaleType,
         stops: m.stops,
-        flipDiverging: m.flipDiverging,
+        ramp: m.ramp,
         global: m.global,
         firstYear: (m as MetricDef & { firstYear?: number }).firstYear,
         lastYear: (m as MetricDef & { lastYear?: number }).lastYear,

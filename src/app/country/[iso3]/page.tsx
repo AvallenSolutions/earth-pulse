@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { LineChart } from "@/components/LineChart";
+import { accentFor } from "@/lib/colors";
 import { ActionsCard } from "@/components/ActionsCard";
 import {
   DOMAIN_LABELS,
@@ -105,7 +106,11 @@ export default async function CountryPage({
                         </span>
                       </div>
                       <div className="mt-3">
-                        <LineChart points={series} unit={metric.unit} />
+                        <LineChart
+                          points={series}
+                          unit={metric.unit}
+                          colour={accentFor(metric.scaleType, metric.ramp)}
+                        />
                       </div>
                       <p className="mt-2 text-xs leading-snug text-[#898781]">
                         {metric.explainer}{" "}

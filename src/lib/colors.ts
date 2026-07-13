@@ -1,90 +1,96 @@
 /**
- * Colour scales for the dark map surface, from the validated dataviz palette.
- * Sequential: one blue ramp, receding (darkest) at near-zero on dark.
- * Diverging: blue (cool) <-> red (warm) with a neutral dark-gray midpoint;
- * intensity (brightness on dark) grows towards each extreme.
+ * Colour system for the map. Each metric names a ramp so every domain has
+ * its own identity: ember for emissions, greens for renewables and forests,
+ * amber for fossil fuels, teal for water, magenta for air pollution.
+ *
+ * All ramps run low -> high as dark -> bright: on the dark terrain surface,
+ * brightness is intensity, and low values recede into the landscape.
+ * Sequential steps are ColorBrewer scales (colourblind-checked) reversed for
+ * the dark surface; diverging ramps put a dark neutral at the midpoint so
+ * "no change" recedes and both extremes glow.
  */
 
-export const NO_DATA = "#2c2c2a";
+export const NO_DATA = "rgba(10, 16, 26, 0.45)";
 
-/** Blue ramp, low -> high, stepped for the dark surface. */
-export const SEQUENTIAL = [
-  "#0d366b",
-  "#104281",
-  "#1c5cab",
-  "#256abf",
-  "#3987e5",
-  "#6da7ec",
-  "#9ec5f4",
-  "#cde2fb",
-];
-
-/** Diverging blue<->red around a neutral midpoint, dark surface steps. */
-export const DIVERGING = {
-  cool: ["#b7d3f6", "#5598e7", "#1c5cab"], // extreme -> near-mid
-  mid: "#383835",
-  warm: ["#8a3232", "#e66767", "#f5b8b8"], // near-mid -> extreme
+export const SEQUENTIAL_RAMPS: Record<string, string[]> = {
+  ember: ["#3d0a10", "#6b1016", "#9c1c1c", "#cc3a24", "#ee6a30", "#fb9a3c", "#fecf62", "#ffeda0"],
+  amber: ["#662506", "#993404", "#cc4c02", "#ec7014", "#fe9929", "#fec44f", "#fee391", "#fff7bc"],
+  greens: ["#00441b", "#006d2c", "#238b45", "#41ab5d", "#74c476", "#a1d99b", "#c7e9c0", "#e5f5e0"],
+  violet: ["#4d004b", "#810f7c", "#88419d", "#8c6bb1", "#8c96c6", "#9ebcda", "#bfd3e6", "#e0ecf4"],
+  teal: ["#084081", "#0868ac", "#2b8cbe", "#4eb3d3", "#7bccc4", "#a8ddb5", "#ccebc5", "#e0f3db"],
+  blues: ["#0d366b", "#104281", "#1c5cab", "#256abf", "#3987e5", "#6da7ec", "#9ec5f4", "#cde2fb"],
+  magenta: ["#49006a", "#7a0177", "#ae017e", "#dd3497", "#f768a1", "#fa9fb5", "#fcc5c0", "#fde0dd"],
+  loss: ["#3f0d05", "#701a09", "#a52c12", "#d7301f", "#ef6548", "#fc8d59", "#fdbb84", "#fee8c8"],
+  reds: ["#360409", "#67000d", "#a50f15", "#cb181d", "#ef3b2c", "#fb6a4a", "#fc9272", "#fee0d2"],
 };
+
+/** Arms run extreme -> near-midpoint; mid is the recessive neutral. */
+export const DIVERGING_RAMPS: Record<
+  string,
+  { low: string[]; mid: string; high: string[] }
+> = {
+  // cold blue <-> hot red (temperature)
+  temp: {
+    low: ["#b7d3f6", "#5598e7", "#1c5cab"],
+    mid: "#383835",
+    high: ["#8a3232", "#e66767", "#f5b8b8"],
+  },
+  // dry brown <-> wet teal (rainfall)
+  rain: {
+    low: ["#f0cf8e", "#c99b4a", "#6e5424"],
+    mid: "#383835",
+    high: ["#1d5f58", "#35a79b", "#9fe3d8"],
+  },
+};
+
+const DEFAULT_SEQUENTIAL = "blues";
+const DEFAULT_DIVERGING = "temp";
+
+export function rampColours(
+  scaleType: "sequential" | "diverging",
+  ramp?: string
+): string[] {
+  if (scaleType === "sequential") {
+    return SEQUENTIAL_RAMPS[ramp ?? DEFAULT_SEQUENTIAL] ?? SEQUENTIAL_RAMPS[DEFAULT_SEQUENTIAL];
+  }
+  const d = DIVERGING_RAMPS[ramp ?? DEFAULT_DIVERGING] ?? DIVERGING_RAMPS[DEFAULT_DIVERGING];
+  return [...d.low, d.mid, ...d.high];
+}
 
 /** MapLibre interpolate expression stops: [value, colour, value, colour...] */
 export function scaleStops(
   scaleType: "sequential" | "diverging",
   [min, max]: [number, number],
   customStops?: number[],
-  flipDiverging?: boolean
+  ramp?: string
 ): (number | string)[] {
   const stops: (number | string)[] = [];
   if (scaleType === "sequential") {
-    SEQUENTIAL.forEach((c, i) => {
+    const colours = rampColours("sequential", ramp);
+    colours.forEach((c, i) => {
       const v =
-        customStops?.[i] ?? min + ((max - min) * i) / (SEQUENTIAL.length - 1);
+        customStops?.[i] ?? min + ((max - min) * i) / (colours.length - 1);
       stops.push(v, c);
     });
   } else {
-    // Default: low = cool (blue), high = warm (red). Flipped: low = warm,
-    // for metrics where low is the "hot" pole (e.g. drought).
-    const { cool, mid, warm } = DIVERGING;
-    const lowArm = flipDiverging ? [warm[2], warm[1], warm[0]] : cool;
-    const highArm = flipDiverging ? [cool[2], cool[1], cool[0]] : warm;
-    stops.push(min, lowArm[0]);
-    stops.push(min / 2, lowArm[1]);
-    stops.push(min / 6, lowArm[2]);
-    stops.push(0, mid);
-    stops.push(max / 6, highArm[0]);
-    stops.push(max / 2, highArm[1]);
-    stops.push(max, highArm[2]);
+    const d = DIVERGING_RAMPS[ramp ?? DEFAULT_DIVERGING] ?? DIVERGING_RAMPS[DEFAULT_DIVERGING];
+    stops.push(min, d.low[0]);
+    stops.push(min / 2, d.low[1]);
+    stops.push(min / 6, d.low[2]);
+    stops.push(0, d.mid);
+    stops.push(max / 6, d.high[0]);
+    stops.push(max / 2, d.high[1]);
+    stops.push(max, d.high[2]);
   }
   return stops;
 }
 
-/** Same scale evaluated in JS, for the legend and tooltips. */
-export function colourFor(
-  value: number,
+/** A bright step from the metric's ramp, for chart lines and sparklines. */
+export function accentFor(
   scaleType: "sequential" | "diverging",
-  scale: [number, number]
+  ramp?: string
 ): string {
-  const stops = scaleStops(scaleType, scale);
-  const pairs: [number, string][] = [];
-  for (let i = 0; i < stops.length; i += 2)
-    pairs.push([stops[i] as number, stops[i + 1] as string]);
-  if (value <= pairs[0][0]) return pairs[0][1];
-  for (let i = 1; i < pairs.length; i++) {
-    if (value <= pairs[i][0]) {
-      const [v0, c0] = pairs[i - 1];
-      const [v1, c1] = pairs[i];
-      return mix(c0, c1, (value - v0) / (v1 - v0));
-    }
-  }
-  return pairs[pairs.length - 1][1];
-}
-
-function mix(a: string, b: string, t: number): string {
-  const pa = hex(a);
-  const pb = hex(b);
-  const c = pa.map((x, i) => Math.round(x + (pb[i] - x) * t));
-  return `#${c.map((x) => x.toString(16).padStart(2, "0")).join("")}`;
-}
-
-function hex(h: string): number[] {
-  return [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  if (scaleType === "sequential") return rampColours("sequential", ramp)[5];
+  const d = DIVERGING_RAMPS[ramp ?? DEFAULT_DIVERGING] ?? DIVERGING_RAMPS[DEFAULT_DIVERGING];
+  return d.high[1];
 }

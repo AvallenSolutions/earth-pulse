@@ -12,10 +12,12 @@ export function LineChart({
   points,
   unit,
   height = 180,
+  colour = "#3987e5",
 }: {
   points: [number, number][];
   unit: string;
   height?: number;
+  colour?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<number | null>(null); // index into points
@@ -115,7 +117,7 @@ export function LineChart({
             strokeWidth="1"
           />
         )}
-        <path d={d} fill="none" stroke="#3987e5" strokeWidth="2" />
+        <path d={d} fill="none" stroke={colour} strokeWidth="2" />
         {h && (
           <>
             <line
@@ -130,7 +132,7 @@ export function LineChart({
               cx={px(h[0])}
               cy={py(h[1])}
               r="4"
-              fill="#3987e5"
+              fill={colour}
               stroke="#1a1a19"
               strokeWidth="2"
             />
