@@ -8,7 +8,7 @@ Full plan: [PLAN.md](../PLAN.md).
 - [x] Metrics registry + observations schema; migration 0001 applied to the
       earth_pulse schema in the shared alkatera-lca-verifier Supabase project
 - [x] Countries + metrics seeded in DB
-- [ ] Register Phase 2 API keys (NASA FIRMS, OpenAQ) — not needed yet
+- [x] Register Phase 2 API keys (NASA FIRMS, OpenAQ) — in .env.local
 - [ ] Bulk-load observations into DB (app runs fully on static JSON; load when
       a feature actually needs DB queries)
 
@@ -27,11 +27,15 @@ Full plan: [PLAN.md](../PLAN.md).
 - [ ] Shareable URL state (?metric=&year=) on the map
 - [ ] OG images for social sharing
 
-## Phase 2 — Live pulse (next)
-- [ ] Planet vitals strip (Mauna Loa CO2 daily, GISTEMP, NSIDC sea ice)
-- [ ] Live layers: FIRMS fires, OpenAQ air quality (needs free API keys)
-- [ ] NASA GIBS satellite imagery layer with date picker
-- [ ] Cached proxy API routes + graceful degradation
+## Phase 2 — Live pulse ✅ (13 Jul 2026)
+- [x] Planet vitals strip: Mauna Loa CO2 (weekly, 429 ppm), GISTEMP (+1.18°C
+      Jun 2026), NSIDC Arctic sea ice (-17.6% vs 1981-2010); ISR 6h, fail-soft
+- [x] FIRMS active fires layer (NOAA-20 + NOAA-21 VIIRS; SNPP retired) via
+      key-hiding proxy /api/fires, 30 min edge cache
+- [x] OpenAQ air quality layer: ~10k stations deduped, /api/air proxy, 1h
+      cache, WHO-breakpoint status colours + legend
+- [x] NASA GIBS satellite imagery (keyless) with date picker back to 2012
+- [x] All verified in browser (satellite + fires + air simultaneously)
 
 ## Phase 3 — Water
 - [ ] SPEI drought layer, Copernicus drought/flood alerts, AQUASTAT, Aqueduct

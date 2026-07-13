@@ -20,3 +20,13 @@ Corrections and patterns to remember for this project. Reviewed at session start
 - **Check the actual dataset before writing attribution.** The
   annual-temperature-anomalies grapher is Copernicus ERA5 (1940+, 1991-2020
   baseline), not Berkeley Earth as assumed from the metric name.
+- **Suomi NPP (SNPP) is retired (2026).** FIRMS VIIRS_SNPP feeds return empty
+  data with 200s and no errors. Use NOAA-20 + NOAA-21 layers for fires. The
+  GIBS SNPP imagery layer still serves true-colour tiles, but prefer the
+  NOAA satellites where freshness matters.
+- **Browser-pane WebGL screenshots show stale frames.** After any layer
+  change, run map.triggerRepaint() immediately before the screenshot or the
+  capture shows the previous frame (or black). Layers were "invisible" twice
+  for this reason while rendering perfectly.
+- **NASA GISS 403s Node's default user agent.** Send a real User-Agent on all
+  agency fetches (vitals.ts does).

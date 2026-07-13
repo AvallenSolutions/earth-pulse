@@ -5,8 +5,21 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { NO_DATA, scaleStops, SEQUENTIAL, DIVERGING } from "@/lib/colors";
 import { DOMAIN_LABELS, formatValue, type Country, type Metric, type SeriesFile } from "@/lib/types";
+import type { Vitals } from "@/lib/vitals";
 import { Sparkline } from "./Sparkline";
 import { CountrySearch } from "./CountrySearch";
+import { VitalsStrip } from "./VitalsStrip";
+
+/** Latest full GIBS imagery day (UTC yesterday). */
+function latestImageryDate(): string {
+  return new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+}
+
+const AIR_BREAKS = {
+  colours: ["#0ca30c", "#fab219", "#ec835a", "#d03b3b"],
+  values: [10, 25, 50],
+  labels: ["under 10", "10-25", "25-50", "over 50"],
+};
 
 type Hover = {
   iso3: string;
@@ -39,9 +52,11 @@ async function fetchSeries(metric: string) {
 export function MapExplorer({
   metrics,
   countries,
+  vitals,
 }: {
   metrics: Metric[];
   countries: Country[];
+  vitals: Vitals;
 }) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -54,6 +69,11 @@ export function MapExplorer({
   const [series, setSeries] = useState<SeriesFile>({});
   const valuesRef = useRef<Record<string, number>>({});
   const paintedIso = useRef<Set<string>>(new Set());
+  const [satOn, setSatOn] = useState(false);
+  const [satDate, setSatDate] = useState(latestImageryDate);
+  const [firesOn, setFiresOn] = useState(false);
+  const [airOn, setAirOn] = useState(false);
+  const [airStatus, setAirStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   // Init map once
   useEffect(() => {
@@ -206,6 +226,112 @@ export function MapExplorer({
     };
   }, [metric, year, mapReady]);
 
+  // Satellite imagery layer (NASA GIBS, keyless). Sits beneath the country
+  // fills; the choropleth hides while imagery is on but hover/click stay live.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    if (map.getLayer("gibs")) map.removeLayer("gibs");
+    if (map.getSource("gibs")) map.removeSource("gibs");
+    if (satOn) {
+      map.addSource("gibs", {
+        type: "raster",
+        tiles: [
+          `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${satDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+        ],
+        tileSize: 256,
+        maxzoom: 9,
+        attribution:
+          'Imagery: <a href="https://earthdata.nasa.gov/gibs">NASA GIBS</a>',
+      });
+      map.addLayer(
+        { id: "gibs", type: "raster", source: "gibs", paint: { "raster-opacity": 1 } },
+        "country-fills"
+      );
+    }
+    map.setPaintProperty("country-fills", "fill-opacity", satOn ? 0 : 1);
+    map.setPaintProperty(
+      "country-borders",
+      "line-color",
+      satOn ? "rgba(255,255,255,0.25)" : "#0d0d0d"
+    );
+  }, [satOn, satDate, mapReady]);
+
+  // Active fires layer (NASA FIRMS via our proxy so the key stays server-side)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    if (map.getLayer("fires")) map.removeLayer("fires");
+    if (map.getSource("fires")) map.removeSource("fires");
+    if (firesOn) {
+      map.addSource("fires", {
+        type: "raster",
+        tiles: ["/api/fires?bbox={bbox-epsg-3857}"],
+        tileSize: 256,
+        attribution:
+          'Fires: <a href="https://firms.modaps.eosdis.nasa.gov">NASA FIRMS</a>',
+      });
+      map.addLayer({ id: "fires", type: "raster", source: "fires" });
+    }
+  }, [firesOn, mapReady]);
+
+  // Air quality layer (OpenAQ latest PM2.5 via our aggregating proxy)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    let alive = true;
+    if (!airOn) {
+      if (map.getLayer("air")) map.removeLayer("air");
+      if (map.getSource("air")) map.removeSource("air");
+      return;
+    }
+    (async () => {
+      setAirStatus("loading");
+      try {
+        const res = await fetch("/api/air");
+        if (!res.ok) throw new Error(String(res.status));
+        const { points } = (await res.json()) as { points: [number, number, number][] };
+        if (!alive || !mapRef.current) return;
+        const geojson = {
+          type: "FeatureCollection" as const,
+          features: points.map(([lon, lat, pm25]) => ({
+            type: "Feature" as const,
+            properties: { pm25 },
+            geometry: { type: "Point" as const, coordinates: [lon, lat] },
+          })),
+        };
+        if (!map.getSource("air")) {
+          map.addSource("air", { type: "geojson", data: geojson });
+          map.addLayer({
+            id: "air",
+            type: "circle",
+            source: "air",
+            paint: {
+              "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 1.6, 4, 3, 8, 7],
+              "circle-color": [
+                "step",
+                ["get", "pm25"],
+                AIR_BREAKS.colours[0],
+                AIR_BREAKS.values[0], AIR_BREAKS.colours[1],
+                AIR_BREAKS.values[1], AIR_BREAKS.colours[2],
+                AIR_BREAKS.values[2], AIR_BREAKS.colours[3],
+              ],
+              "circle-opacity": 0.85,
+              "circle-stroke-color": "#0d0d0d",
+              "circle-stroke-width": 0.4,
+            },
+          });
+        }
+        setAirStatus("ready");
+      } catch {
+        if (alive) setAirStatus("error");
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [airOn, mapReady]);
+
   // Play/animate the timeline
   useEffect(() => {
     if (!playing) return;
@@ -256,9 +382,78 @@ export function MapExplorer({
         </p>
       </div>
 
+      {/* Planet vitals */}
+      <VitalsStrip vitals={vitals} />
+
       {/* Search */}
       <div className="absolute right-4 top-4 z-20 w-64">
         <CountrySearch countries={countries} onSelect={onSelectCountry} />
+      </div>
+
+      {/* Live layers */}
+      <div className="absolute right-4 top-16 z-10 w-64 rounded-xl border border-white/10 bg-[#1a1a19]/90 p-3 backdrop-blur">
+        <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-[#898781]">
+          Live layers
+        </div>
+        <label className="flex cursor-pointer items-center justify-between py-1 text-sm text-[#c3c2b7]">
+          <span>Satellite imagery</span>
+          <input
+            type="checkbox"
+            checked={satOn}
+            onChange={(e) => setSatOn(e.target.checked)}
+            className="h-4 w-4 accent-white"
+          />
+        </label>
+        {satOn && (
+          <input
+            type="date"
+            value={satDate}
+            min="2012-01-20"
+            max={latestImageryDate()}
+            onChange={(e) => e.target.value && setSatDate(e.target.value)}
+            aria-label="Imagery date"
+            className="mb-1 w-full rounded-md border border-white/10 bg-black/30 px-2 py-1 text-xs text-white [color-scheme:dark]"
+          />
+        )}
+        <label className="flex cursor-pointer items-center justify-between py-1 text-sm text-[#c3c2b7]">
+          <span>Active fires (24h)</span>
+          <input
+            type="checkbox"
+            checked={firesOn}
+            onChange={(e) => setFiresOn(e.target.checked)}
+            className="h-4 w-4 accent-white"
+          />
+        </label>
+        <label className="flex cursor-pointer items-center justify-between py-1 text-sm text-[#c3c2b7]">
+          <span>Air quality now</span>
+          <input
+            type="checkbox"
+            checked={airOn}
+            onChange={(e) => setAirOn(e.target.checked)}
+            className="h-4 w-4 accent-white"
+          />
+        </label>
+        {airOn && airStatus === "loading" && (
+          <p className="text-[10px] text-[#898781]">Loading stations…</p>
+        )}
+        {airOn && airStatus === "error" && (
+          <p className="text-[10px] text-[#898781]">
+            Air quality feed unavailable right now.
+          </p>
+        )}
+        {airOn && airStatus === "ready" && (
+          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-[#898781]">
+            {AIR_BREAKS.labels.map((l, i) => (
+              <span key={l} className="flex items-center gap-1">
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ background: AIR_BREAKS.colours[i] }}
+                />
+                {l} µg/m³
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Metric picker */}
