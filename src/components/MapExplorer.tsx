@@ -9,6 +9,7 @@ import type { Vitals } from "@/lib/vitals";
 import { Sparkline } from "./Sparkline";
 import { CountrySearch } from "./CountrySearch";
 import { VitalsStrip } from "./VitalsStrip";
+import { VitalsModal } from "./VitalsModal";
 import { Panel } from "./Panel";
 import { EventPopup, type MapEvent } from "./EventPopup";
 
@@ -145,6 +146,7 @@ export function MapExplorer({
     { lon: number; lat: number; label: string; event: MapEvent }[]
   >([]);
   const [tickerI, setTickerI] = useState(0);
+  const [vitalsModal, setVitalsModal] = useState<string | null>(null);
   const [airStatus, setAirStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   // Init map once
@@ -1126,12 +1128,12 @@ export function MapExplorer({
           </a>
         </div>
         <div className="mt-2 xl:hidden">
-          <VitalsStrip vitals={vitals} variant="inline" />
+          <VitalsStrip vitals={vitals} variant="inline" onSelect={setVitalsModal} />
         </div>
       </div>
 
       {/* Planet vitals */}
-      <VitalsStrip vitals={vitals} />
+      <VitalsStrip vitals={vitals} onSelect={setVitalsModal} />
 
       {/* Search */}
       <div className="absolute right-4 top-4 z-20 w-64">
@@ -1473,6 +1475,11 @@ export function MapExplorer({
           <span>{sliderMax}</span>
         </div>
       </div>
+
+      {/* Vitals history modal */}
+      {vitalsModal && (
+        <VitalsModal id={vitalsModal} onClose={() => setVitalsModal(null)} />
+      )}
 
       {/* Event popup */}
       {popup && (

@@ -17,6 +17,7 @@ export function LineChart({
   colour = "#3987e5",
   compare,
   overlays,
+  baseline = "zero",
   height = 200,
 }: {
   points: [number, number][];
@@ -25,6 +26,9 @@ export function LineChart({
   compare?: { label: string; points: [number, number][] };
   /** Extra series (e.g. scenario projections), dashed and direct-labelled. */
   overlays?: { label: string; points: [number, number][]; colour: string }[];
+  /** "zero" anchors the y-axis at 0 (default); "data" fits the data range,
+   * for concentration-style series where zero would flatten the change. */
+  baseline?: "zero" | "data";
   height?: number;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -42,8 +46,10 @@ export function LineChart({
   ];
   const x0 = Math.min(...xs);
   const x1 = Math.max(...xs);
-  let y0 = Math.min(...allYs, 0);
+  let y0 =
+    baseline === "zero" ? Math.min(...allYs, 0) : Math.min(...allYs);
   let y1 = Math.max(...allYs);
+  if (baseline === "data") y0 -= (y1 - y0) * 0.05;
   if (y0 === y1) {
     y0 -= 1;
     y1 += 1;
@@ -63,7 +69,7 @@ export function LineChart({
       .join("");
 
   const d = pathOf(points);
-  const allPositive = points.every(([, y]) => y >= 0);
+  const allPositive = baseline === "zero" && points.every(([, y]) => y >= 0);
   const area = allPositive
     ? `${d}L${px(points[points.length - 1][0]).toFixed(1)},${py(0).toFixed(1)}L${px(points[0][0]).toFixed(1)},${py(0).toFixed(1)}Z`
     : null;
@@ -294,7 +300,7 @@ export function LineChart({
             left: `calc(${(px(h[0]) / width) * 100}% ${px(h[0]) / width > 0.7 ? "- 130px" : "+ 10px"})`,
           }}
         >
-          <span className="tabular-nums text-[#898781]">{h[0]}</span>{" "}
+          <span className="tabular-nums text-[#898781]">{Math.floor(h[0])}</span>{" "}
           {formatValue(h[1], unit)}
           {hCompare && (
             <span className="text-[#898781]">
