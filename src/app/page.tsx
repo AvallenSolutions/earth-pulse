@@ -18,7 +18,7 @@ export default async function Home() {
   const vitals = await getVitals();
   return (
     <MapExplorer
-      metrics={metrics}
+      metrics={metrics.filter((m) => !m.global)}
       countries={countries.filter((c) => c.iso3 !== "WLD")}
       vitals={vitals}
     />

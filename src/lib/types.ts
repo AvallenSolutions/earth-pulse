@@ -10,6 +10,7 @@ export type Metric = {
   scaleType: "sequential" | "diverging";
   stops?: number[];
   flipDiverging?: boolean;
+  global?: boolean;
   firstYear: number;
   lastYear: number;
 };

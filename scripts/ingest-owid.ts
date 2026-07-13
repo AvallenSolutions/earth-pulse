@@ -87,9 +87,9 @@ async function main() {
       points.sort((a, b) => a[0] - b[0]);
       seriesOut[iso3] = points;
       for (const [year, value] of points) {
-        if (iso3 === "WLD") continue; // world stays out of country choropleths
         firstYear = Math.min(firstYear, year);
         lastYear = Math.max(lastYear, year);
+        if (iso3 === "WLD") continue; // world stays out of country choropleths
         if (!years.has(year)) years.set(year, {});
         years.get(year)![iso3] = value;
       }
@@ -122,7 +122,11 @@ async function main() {
       cols.find((c) => names.includes(c.toLowerCase()));
     const entityCol = col("country", "entity")!;
     const codeCol = col("iso_code", "code")!;
-    const yearCol = col("year")!;
+    // Some graphers (sea level, ice sheets) are daily; we aggregate to
+    // annual means so everything shares the [year, value] series shape.
+    const yearCol = col("year");
+    const dayCol = yearCol ? undefined : col("day");
+    if (!yearCol && !dayCol) throw new Error(`no year/day column in ${key}`);
 
     for (const m of metrics) {
       if (m.derived) continue; // computed after all source metrics load
@@ -134,12 +138,17 @@ async function main() {
 
       // iso3 -> sorted [year, value][]
       const series = new Map<string, [number, number][]>();
+      // For daily datasets: iso3 -> year -> [sum, count]
+      const daily = new Map<string, Map<number, [number, number]>>();
       for (const row of rows) {
         const raw = row[valueCol];
         if (raw === "" || raw === undefined) continue;
-        const year = Number(row[yearCol]);
+        const year = yearCol
+          ? Number(row[yearCol])
+          : Number(row[dayCol!]?.slice(0, 4));
         const value = Number(raw);
         if (!Number.isFinite(year) || !Number.isFinite(value)) continue;
+        if (m.clampFirstYear && year < m.clampFirstYear) continue;
 
         let iso3 = row[codeCol];
         if (iso3 === "OWID_WRL") iso3 = "WLD";
@@ -158,7 +167,22 @@ async function main() {
             on_map: false,
           });
         }
-        series.set(iso3, [...(series.get(iso3) ?? []), [year, value]]);
+        if (yearCol) {
+          series.set(iso3, [...(series.get(iso3) ?? []), [year, value]]);
+        } else {
+          if (!daily.has(iso3)) daily.set(iso3, new Map());
+          const acc = daily.get(iso3)!.get(year) ?? [0, 0];
+          daily.get(iso3)!.set(year, [acc[0] + value, acc[1] + 1]);
+        }
+      }
+      for (const [iso3, years] of daily) {
+        series.set(
+          iso3,
+          [...years.entries()].map(([y, [sum, n]]) => [
+            y,
+            Number((sum / n).toFixed(2)),
+          ])
+        );
       }
 
       allSeries.set(m.id, series);
@@ -204,6 +228,7 @@ async function main() {
         scaleType: m.scaleType,
         stops: m.stops,
         flipDiverging: m.flipDiverging,
+        global: m.global,
         firstYear: (m as MetricDef & { firstYear?: number }).firstYear,
         lastYear: (m as MetricDef & { lastYear?: number }).lastYear,
       })),

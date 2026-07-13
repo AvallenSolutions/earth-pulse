@@ -50,8 +50,17 @@ Full plan: [PLAN.md](../PLAN.md).
       service (drought.emergency.copernicus.eu) rejects unauthenticated WMS
       GetMap. Revisit; SPEI NetCDF country aggregation is the fallback.
 
-## Phase 4 — Ice, oceans, land & life
-- [ ] Sea level, ocean heat, glaciers, GFW forest loss, disasters, methane
+## Phase 4 — Ice, oceans, land & life ✅ (13 Jul 2026)
+- [x] Country metrics: methane (1850+), tree cover loss (GFW, 2001+), forest
+      area share (1990+), disaster deaths (IHME, 2000+)
+- [x] Global metrics with new `global` flag + /planet trends page: sea level
+      (1880+), ocean heat top 2000m (1957+), Greenland + Antarctica ice sheet
+      mass (NASA GRACE, 2002+); ingest gained daily->annual aggregation
+- [x] Verified in browser: map picker (5 domains, 16 metrics), planet page,
+      Brazil country page
+- [ ] Glacier mass balance (WGMS): no OWID grapher found; needs direct WGMS
+      ingest if wanted
+- [ ] Living Planet Index: regional only, does not fit country model; skipped
 
 ## Phase 5 — Polish & launch
 - [ ] Explainer copy pass, accessibility, mobile, SEO, monitoring, deploy

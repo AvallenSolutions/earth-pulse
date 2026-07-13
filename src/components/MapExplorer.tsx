@@ -400,13 +400,19 @@ export function MapExplorer({
       <div ref={mapContainer} className="absolute inset-0 h-full w-full" />
 
       {/* Header */}
-      <div className="pointer-events-none absolute left-4 top-4 z-10">
-        <h1 className="text-xl font-semibold tracking-tight text-white">
+      <div className="absolute left-4 top-4 z-10">
+        <h1 className="pointer-events-none text-xl font-semibold tracking-tight text-white">
           Earth Pulse
         </h1>
-        <p className="text-sm text-[#c3c2b7]">
+        <p className="pointer-events-none text-sm text-[#c3c2b7]">
           The state of the planet, {metric.firstYear} to today
         </p>
+        <a
+          href="/planet"
+          className="mt-1 inline-block text-sm text-[#6da7ec] hover:underline"
+        >
+          Planet trends →
+        </a>
       </div>
 
       {/* Planet vitals */}

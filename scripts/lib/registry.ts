@@ -25,6 +25,11 @@ export type MetricDef = {
   flipDiverging?: boolean;
   /** Derived metrics are computed from another metric during ingest. */
   derived?: { from: string; kind: "anomaly_pct"; baselineYears: [number, number] };
+  /** Ignore data before this year (e.g. sparse long-run historical rows). */
+  clampFirstYear?: number;
+  /** Global-scale metrics (World/ice sheets only): shown on the planet
+   * trends page, hidden from the country map picker. */
+  global?: boolean;
 };
 
 export const DATASET_URLS = {
@@ -135,6 +140,125 @@ export const METRICS: MetricDef[] = [
     scale: [0, 100000],
     scaleType: "sequential",
     stops: [0, 3000, 8000, 15000, 25000, 40000, 60000, 100000],
+  },
+  {
+    id: "methane",
+    name: "Methane emissions",
+    unit: "Mt CO2e/year",
+    domain: "climate",
+    source: "Global Carbon Project / PRIMAP via Our World in Data",
+    sourceUrl: "https://ourworldindata.org/greenhouse-gas-emissions",
+    licence: "CC BY 4.0",
+    explainer:
+      "Methane traps around 80 times more heat than CO2 over 20 years. It comes mainly from livestock, rice, landfill and leaky fossil fuel infrastructure.",
+    timeResolution: "annual",
+    dataset: "co2",
+    column: "methane",
+    scale: [0, 1500],
+    scaleType: "sequential",
+    stops: [0, 5, 15, 40, 100, 250, 600, 1500],
+  },
+  {
+    id: "tree_cover_loss",
+    name: "Tree cover loss",
+    unit: "ha/year",
+    domain: "land_life",
+    source: "Global Forest Watch (Hansen/UMD) via Our World in Data",
+    sourceUrl: "https://ourworldindata.org/deforestation",
+    licence: "CC BY 4.0",
+    explainer:
+      "Forest area lost each year to fire, logging, farming and storms. Not all loss is permanent deforestation, but the trend matters.",
+    timeResolution: "annual",
+    dataset: { grapherSlug: "tree-cover-loss" },
+    column: "tree_cover_loss_ha__category_total",
+    scale: [0, 4000000],
+    scaleType: "sequential",
+    stops: [0, 2000, 10000, 50000, 200000, 500000, 1500000, 4000000],
+  },
+  {
+    id: "forest_share",
+    name: "Forest area",
+    unit: "% of land",
+    domain: "land_life",
+    source: "FAO via Our World in Data",
+    sourceUrl: "https://ourworldindata.org/forest-area",
+    licence: "CC BY 4.0",
+    explainer:
+      "How much of a country's land is covered by forest.",
+    timeResolution: "annual",
+    dataset: { grapherSlug: "forest-area-as-share-of-land-area" },
+    column: "forest_share",
+    clampFirstYear: 1990,
+    scale: [0, 100],
+    scaleType: "sequential",
+  },
+  {
+    id: "disaster_deaths",
+    name: "Deaths from natural disasters",
+    unit: "deaths/year",
+    domain: "land_life",
+    source: "IHME Global Burden of Disease via Our World in Data",
+    sourceUrl: "https://ourworldindata.org/natural-disasters",
+    licence: "CC BY 4.0",
+    explainer:
+      "People killed by floods, storms, droughts, heatwaves, earthquakes and other disasters each year. Single events dominate single years.",
+    timeResolution: "annual",
+    dataset: { grapherSlug: "deaths-from-natural-disasters" },
+    column: "death_count__age_group_allages__sex_both_sexes__cause_natural_disasters",
+    scale: [0, 300000],
+    scaleType: "sequential",
+    stops: [0, 1, 10, 50, 250, 2000, 20000, 300000],
+  },
+  {
+    id: "sea_level",
+    name: "Global sea level",
+    unit: "mm vs 1993-2008 average",
+    domain: "ice_oceans",
+    source: "Church & White / UHSLC via Our World in Data",
+    sourceUrl: "https://ourworldindata.org/grapher/sea-level",
+    licence: "CC BY 4.0",
+    explainer:
+      "The global average sea surface height. It rises as warming water expands and land ice melts into the ocean.",
+    timeResolution: "annual",
+    dataset: { grapherSlug: "sea-level" },
+    column: "sea_level_average",
+    scale: [0, 1],
+    scaleType: "sequential",
+    global: true,
+  },
+  {
+    id: "ocean_heat",
+    name: "Ocean heat content (top 2000m)",
+    unit: "10²² joules",
+    domain: "ice_oceans",
+    source: "NOAA NCEI via Our World in Data",
+    sourceUrl: "https://ourworldindata.org/grapher/ocean-heat-top-2000m",
+    licence: "CC BY 4.0",
+    explainer:
+      "Over 90% of the extra heat trapped by greenhouse gases ends up in the ocean. This is the planet's clearest warming signal.",
+    timeResolution: "annual",
+    dataset: { grapherSlug: "ocean-heat-top-2000m" },
+    column: "ocean_heat_content_noaa_2000m",
+    scale: [0, 1],
+    scaleType: "sequential",
+    global: true,
+  },
+  {
+    id: "ice_sheets",
+    name: "Ice sheet mass change",
+    unit: "Gt vs 2002",
+    domain: "ice_oceans",
+    source: "NASA GRACE via Our World in Data",
+    sourceUrl: "https://ourworldindata.org/grapher/ice-sheet-mass-balance",
+    licence: "CC BY 4.0",
+    explainer:
+      "How much ice Greenland and Antarctica have lost since 2002, measured from space by tracking tiny changes in Earth's gravity.",
+    timeResolution: "annual",
+    dataset: { grapherSlug: "ice-sheet-mass-balance" },
+    column: "land_ice_mass_nasa",
+    scale: [0, 1],
+    scaleType: "sequential",
+    global: true,
   },
   {
     id: "water_stress",

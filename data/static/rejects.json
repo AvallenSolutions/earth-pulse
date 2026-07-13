@@ -128,6 +128,14 @@
     "no ISO3 code"
   ],
   [
+    "co2:Least developed countries (Jones et al.)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:OECD (Jones et al.)",
+    "no ISO3 code"
+  ],
+  [
     "grapher_annual-temperature-anomalies:Africa (NIAID)",
     "no ISO3 code"
   ],
@@ -361,6 +369,102 @@
   ],
   [
     "energy:Yugoslavia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_tree-cover-loss:Africa",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_tree-cover-loss:Asia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_tree-cover-loss:Europe",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_tree-cover-loss:High-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_tree-cover-loss:Kosovo",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_tree-cover-loss:Low-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_tree-cover-loss:Lower-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_tree-cover-loss:North America",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_tree-cover-loss:Oceania",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_tree-cover-loss:South America",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_tree-cover-loss:Upper-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_forest-area-as-share-of-land-area:England",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_forest-area-as-share-of-land-area:European Union (27)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_forest-area-as-share-of-land-area:High-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_forest-area-as-share-of-land-area:Low-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_forest-area-as-share-of-land-area:Lower-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_forest-area-as-share-of-land-area:Scotland",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_forest-area-as-share-of-land-area:Upper-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_deaths-from-natural-disasters:Africa",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_deaths-from-natural-disasters:Asia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_deaths-from-natural-disasters:Europe",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_deaths-from-natural-disasters:North America",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_deaths-from-natural-disasters:Oceania",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_deaths-from-natural-disasters:South America",
     "no ISO3 code"
   ],
   [
