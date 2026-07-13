@@ -372,6 +372,54 @@
     "no ISO3 code"
   ],
   [
+    "energy:ASEAN (Ember)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Africa (Ember)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Asia (Ember)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:EU (Ember)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Europe (Ember)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:G20 (Ember)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:G7 (Ember)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Latin America and Caribbean (Ember)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Middle East (Ember)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:North America (Ember)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:OECD (Ember)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Oceania (Ember)",
+    "no ISO3 code"
+  ],
+  [
     "grapher_tree-cover-loss:Africa",
     "no ISO3 code"
   ],
@@ -641,6 +689,482 @@
   ],
   [
     "grapher_average-precipitation-per-year:Saint Helena, Ascension and Tristan da Cunha",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_electric-car-sales-share:Europe",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_electric-car-sales-share:European Union (27)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_electric-car-sales-share:Rest of World",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Australia and New Zealand (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Central and Southern Asia (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Eastern and South-Eastern Asia (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Europe (UN)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Europe and Northern America (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Latin America and the Caribbean (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Latin America and the Caribbean (UN)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Least Developed Countries (LDCs)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Northern Africa and Western Asia (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Northern America (UN)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Oceania (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Oceania (UN)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Saint Barthlemy",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Small Island Developing States (SIDS)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_red-list-index:Sub-Saharan Africa (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_terrestrial-protected-areas:East Asia and Pacific (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_terrestrial-protected-areas:Europe and Central Asia (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_terrestrial-protected-areas:European Union (27)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_terrestrial-protected-areas:High-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_terrestrial-protected-areas:Latin America and Caribbean (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_terrestrial-protected-areas:Low-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_terrestrial-protected-areas:Lower-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_terrestrial-protected-areas:Middle East, North Africa, Afghanistan and Pakistan (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_terrestrial-protected-areas:North America (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_terrestrial-protected-areas:South Asia (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_terrestrial-protected-areas:Sub-Saharan Africa (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_terrestrial-protected-areas:Upper-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Africa",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Africa (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Americas (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Asia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Asia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Belgium-Luxembourg (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Caribbean (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Central America (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Central Asia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:China (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Czechoslovakia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Eastern Africa (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Eastern Asia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Eastern Europe (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Ethiopia (former)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Europe",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Europe (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:European Union (27)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:High-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Land Locked Developing Countries (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Least Developed Countries (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Low Income Food Deficit Countries (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Low-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Lower-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Micronesia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Middle Africa (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Net Food Importing Developing Countries (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:North America",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Northern Africa (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Northern America (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Northern Europe (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Oceania",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Oceania (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Serbia and Montenegro",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Small Island Developing States (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:South America",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:South America (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:South-eastern Asia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Southern Africa (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Southern Asia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Southern Europe (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Sudan (former)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:USSR",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Upper-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Western Africa (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Western Asia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Western Europe (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_meat-supply-per-person:Yugoslavia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Africa (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Americas (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Asia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Belgium-Luxembourg (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Caribbean (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Central America (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Central Asia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:China (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Czechoslovakia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Eastern Africa (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Eastern Asia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Eastern Europe (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Ethiopia (former)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Europe (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:European Union (27)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Land Locked Developing Countries (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Least Developed Countries (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Low Income Food Deficit Countries (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Melanesia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Micronesia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Middle Africa (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Net Food Importing Developing Countries (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Northern Africa (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Northern America (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Northern Europe (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Oceania (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Polynesia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Serbia and Montenegro",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Small Island Developing States (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:South America (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:South-eastern Asia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Southern Africa (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Southern Asia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Southern Europe (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Sudan (former)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:USSR",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Western Africa (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Western Asia (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Western Europe (FAO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_fertilizer-per-hectare:Yugoslavia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_plastic-waste-per-capita:Channel Islands",
     "no ISO3 code"
   ],
   [

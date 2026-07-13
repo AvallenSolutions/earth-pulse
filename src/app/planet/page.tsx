@@ -18,8 +18,27 @@ function load<T>(rel: string): T {
   return JSON.parse(readFileSync(join(dataDir, rel), "utf8")) as T;
 }
 
+const WORLD_IDS = [
+  "co2",
+  "total_ghg",
+  "methane",
+  "temperature_anomaly",
+  "renewables_share_energy",
+  "coal_share_elec",
+  "energy_per_capita",
+  "pm25",
+  "meat_supply",
+];
+
 export default function PlanetPage() {
-  const metrics = load<Metric[]>("metrics.json").filter((m) => m.global);
+  const allMetrics = load<Metric[]>("metrics.json");
+  const metrics = allMetrics.filter((m) => m.global);
+  const worldCharts = WORLD_IDS.map((id) => {
+    const metric = allMetrics.find((m) => m.id === id);
+    if (!metric) return null;
+    const points = load<SeriesFile>(`series/${id}.json`)["WLD"];
+    return points && points.length > 1 ? { metric, points } : null;
+  }).filter(Boolean) as { metric: Metric; points: [number, number][] }[];
   const countries = load<Country[]>("countries.json");
   const nameOf = (iso3: string) =>
     iso3 === "WLD"
@@ -62,6 +81,50 @@ export default function PlanetPage() {
                     {metric.name}
                     {region ? ` · ${region}` : ""}
                   </h3>
+                  <span className="shrink-0 text-xs tabular-nums text-[#c3c2b7]">
+                    {formatValue(latest[1], metric.unit)} · {latest[0]}
+                  </span>
+                </div>
+                <div className="mt-3">
+                  <LineChart
+                    points={points}
+                    unit={metric.unit}
+                    colour={accentFor(metric.scaleType, metric.ramp)}
+                  />
+                </div>
+                <p className="mt-2 text-xs leading-snug text-[#898781]">
+                  {metric.explainer}{" "}
+                  <a
+                    href={metric.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#6da7ec] hover:underline"
+                  >
+                    {metric.source}
+                  </a>
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        <h2 className="mt-12 text-xl font-semibold tracking-tight">
+          The world in aggregate
+        </h2>
+        <p className="mt-1 max-w-2xl text-sm text-[#c3c2b7]">
+          Every country on the map, summed or averaged into one line per
+          metric. This is the whole story in a handful of curves.
+        </p>
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {worldCharts.map(({ metric, points }) => {
+            const latest = points[points.length - 1];
+            return (
+              <div
+                key={metric.id}
+                className="rounded-xl border border-white/10 bg-[#1a1a19] p-4"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="text-sm font-medium">{metric.name} · World</h3>
                   <span className="shrink-0 text-xs tabular-nums text-[#c3c2b7]">
                     {formatValue(latest[1], metric.unit)} · {latest[0]}
                   </span>

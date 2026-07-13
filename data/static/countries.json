@@ -259,6 +259,13 @@
     "on_map": true
   },
   {
+    "iso3": "BVT",
+    "name": "Bouvet Island",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
     "iso3": "BWA",
     "name": "Botswana",
     "continent": "Africa",
@@ -740,6 +747,13 @@
     "continent": "Asia",
     "region": "Southern Asia",
     "on_map": true
+  },
+  {
+    "iso3": "IOT",
+    "name": "British Indian Ocean Territory",
+    "continent": "",
+    "region": "",
+    "on_map": false
   },
   {
     "iso3": "IRL",
@@ -1381,6 +1395,13 @@
   {
     "iso3": "SHN",
     "name": "Saint Helena",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "SJM",
+    "name": "Svalbard and Jan Mayen",
     "continent": "",
     "region": "",
     "on_map": false

@@ -21,6 +21,7 @@ export const SEQUENTIAL_RAMPS: Record<string, string[]> = {
   blues: ["#0d366b", "#104281", "#1c5cab", "#256abf", "#3987e5", "#6da7ec", "#9ec5f4", "#cde2fb"],
   magenta: ["#49006a", "#7a0177", "#ae017e", "#dd3497", "#f768a1", "#fa9fb5", "#fcc5c0", "#fde0dd"],
   loss: ["#3f0d05", "#701a09", "#a52c12", "#d7301f", "#ef6548", "#fc8d59", "#fdbb84", "#fee8c8"],
+  greys: ["#1c1c1c", "#333333", "#4d4d4d", "#696969", "#878787", "#a6a6a6", "#c9c9c9", "#ededed"],
   reds: ["#360409", "#67000d", "#a50f15", "#cb181d", "#ef3b2c", "#fb6a4a", "#fc9272", "#fee0d2"],
 };
 

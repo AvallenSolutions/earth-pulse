@@ -87,6 +87,8 @@ export function MapExplorer({
   const [firesOn, setFiresOn] = useState(false);
   const [floodsOn, setFloodsOn] = useState(false);
   const [airOn, setAirOn] = useState(false);
+  const [quakesOn, setQuakesOn] = useState(false);
+  const [disastersOn, setDisastersOn] = useState(false);
   const [airStatus, setAirStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   // Init map once
@@ -378,6 +380,129 @@ export function MapExplorer({
     }
   }, [floodsOn, mapReady]);
 
+  // Earthquakes in the last 24h (USGS, refreshed every minute)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    let alive = true;
+    if (!quakesOn) {
+      if (map.getLayer("quakes")) map.removeLayer("quakes");
+      if (map.getSource("quakes")) map.removeSource("quakes");
+      return;
+    }
+    (async () => {
+      try {
+        const res = await fetch("/api/quakes");
+        if (!res.ok) throw new Error(String(res.status));
+        const { points } = (await res.json()) as { points: [number, number, number][] };
+        if (!alive || !mapRef.current || map.getSource("quakes")) return;
+        map.addSource("quakes", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: points.map(([lon, lat, mag]) => ({
+              type: "Feature" as const,
+              properties: { mag },
+              geometry: { type: "Point" as const, coordinates: [lon, lat] },
+            })),
+          },
+          attribution: 'Quakes: <a href="https://earthquake.usgs.gov">USGS</a>',
+        });
+        map.addLayer({
+          id: "quakes",
+          type: "circle",
+          source: "quakes",
+          paint: {
+            "circle-radius": [
+              "interpolate", ["linear"], ["get", "mag"],
+              1, 1.5, 3, 3, 5, 8, 7, 16,
+            ],
+            "circle-color": [
+              "step", ["get", "mag"],
+              "#fed976", 3, "#fb9a3c", 4.5, "#f0502a", 6, "#e01515",
+            ],
+            "circle-opacity": 0.85,
+            "circle-stroke-color": "#0d0d0d",
+            "circle-stroke-width": 0.5,
+          },
+        });
+      } catch (e) {
+        console.error("[quakes layer]", e);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [quakesOn, mapReady]);
+
+  // Live disaster alerts (GDACS: cyclones, floods, droughts, volcanoes)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    let alive = true;
+    if (!disastersOn) {
+      if (map.getLayer("disasters")) map.removeLayer("disasters");
+      if (map.getSource("disasters")) map.removeSource("disasters");
+      return;
+    }
+    (async () => {
+      try {
+        const res = await fetch("/api/disasters");
+        if (!res.ok) throw new Error(String(res.status));
+        const { events } = (await res.json()) as {
+          events: [number, number, string, string, string][];
+        };
+        if (!alive || !mapRef.current || map.getSource("disasters")) return;
+        map.addSource("disasters", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: events.map(([lon, lat, type, level, name]) => ({
+              type: "Feature" as const,
+              properties: { type, level, name },
+              geometry: { type: "Point" as const, coordinates: [lon, lat] },
+            })),
+          },
+          attribution: 'Alerts: <a href="https://www.gdacs.org">GDACS</a>',
+        });
+        map.addLayer({
+          id: "disasters",
+          type: "circle",
+          source: "disasters",
+          paint: {
+            "circle-radius": [
+              "match", ["get", "level"],
+              "Red", 8, "Orange", 5.5, 3.5,
+            ],
+            "circle-color": [
+              "match", ["get", "type"],
+              "TC", "#9085e9",
+              "FL", "#3987e5",
+              "DR", "#e0a355",
+              "VO", "#e34948",
+              "WF", "#ee6a30",
+              "#a6a6a6",
+            ],
+            "circle-opacity": 0.9,
+            "circle-stroke-color": [
+              "match", ["get", "level"],
+              "Red", "#ffffff", "#0d0d0d",
+            ],
+            "circle-stroke-width": [
+              "match", ["get", "level"],
+              "Red", 1.5, 0.5,
+            ],
+          },
+        });
+      } catch {
+        /* feed unavailable */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [disastersOn, mapReady]);
+
   // Air quality layer (OpenAQ latest PM2.5 via our aggregating proxy)
   useEffect(() => {
     const map = mapRef.current;
@@ -481,12 +606,14 @@ export function MapExplorer({
         <p className="pointer-events-none text-sm text-[#c3c2b7]">
           The state of the planet, {metric.firstYear} to today
         </p>
-        <a
-          href="/planet"
-          className="mt-1 inline-block text-sm text-[#6da7ec] hover:underline"
-        >
-          Planet trends →
-        </a>
+        <div className="mt-1 flex gap-4">
+          <a href="/planet" className="text-sm text-[#6da7ec] hover:underline">
+            Planet trends →
+          </a>
+          <a href="/compare" className="text-sm text-[#6da7ec] hover:underline">
+            Compare countries →
+          </a>
+        </div>
       </div>
 
       {/* Planet vitals */}
@@ -556,6 +683,41 @@ export function MapExplorer({
           <p className="text-[10px] text-[#898781]">
             Air quality feed unavailable right now.
           </p>
+        )}
+        <label className="flex cursor-pointer items-center justify-between py-1 text-sm text-[#c3c2b7]">
+          <span>Earthquakes (24h)</span>
+          <input
+            type="checkbox"
+            checked={quakesOn}
+            onChange={(e) => setQuakesOn(e.target.checked)}
+            className="h-4 w-4 accent-white"
+          />
+        </label>
+        {quakesOn && (
+          <div className="mb-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-[#898781]">
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#fed976" }} />M1-3</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#fb9a3c" }} />M3-4.5</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#f0502a" }} />M4.5-6</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-full" style={{ background: "#e01515" }} />M6+</span>
+          </div>
+        )}
+        <label className="flex cursor-pointer items-center justify-between py-1 text-sm text-[#c3c2b7]">
+          <span>Disaster alerts</span>
+          <input
+            type="checkbox"
+            checked={disastersOn}
+            onChange={(e) => setDisastersOn(e.target.checked)}
+            className="h-4 w-4 accent-white"
+          />
+        </label>
+        {disastersOn && (
+          <div className="mb-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-[#898781]">
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#9085e9" }} />cyclone</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#3987e5" }} />flood</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#e0a355" }} />drought</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#e34948" }} />volcano</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full ring-1 ring-white" style={{ background: "#0d0d0d" }} />red alert</span>
+          </div>
         )}
         {airOn && airStatus === "ready" && (
           <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-[#898781]">

@@ -154,9 +154,17 @@ export default async function CountryPage({
   return (
     <div className="min-h-dvh bg-[#0d0d0d] text-white">
       <div className="mx-auto max-w-4xl px-4 py-8">
-        <Link href="/" className="text-sm text-[#6da7ec] hover:underline">
-          ← Back to the world map
-        </Link>
+        <div className="flex items-center justify-between gap-3">
+          <Link href="/" className="text-sm text-[#6da7ec] hover:underline">
+            ← Back to the world map
+          </Link>
+          <Link
+            href={`/compare?a=${iso3}&b=${iso3 === "GBR" ? "FRA" : "GBR"}`}
+            className="text-sm text-[#6da7ec] hover:underline"
+          >
+            Compare this country →
+          </Link>
+        </div>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">
           {country.name}
         </h1>
@@ -279,7 +287,7 @@ export default async function CountryPage({
               {neighbours.map((n) => (
                 <Link
                   key={n.iso3}
-                  href={`/country/${n.iso3}`}
+                  href={`/compare?a=${iso3}&b=${n.iso3}`}
                   className="rounded-full border border-white/10 bg-[#1a1a19] px-3 py-1.5 text-sm text-[#c3c2b7] transition-colors hover:bg-white/10 hover:text-white"
                 >
                   {n.name}

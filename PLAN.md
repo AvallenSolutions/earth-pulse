@@ -243,3 +243,42 @@ Note: Vercel Hobby prohibits commercial use. As a free public-good tool this is 
 1. Name/domain for the project (working title: "Earth Pulse")
 2. Should this carry any alka**tera** branding, or stay fully independent? (Affects Vercel Hobby vs Pro from day one)
 3. Any appetite for a small "what can I do" action section per country, or keep it purely observational?
+
+---
+
+## Data roadmap (13 Jul 2026): towards the environmental God's Eye
+
+Live now: 27 country metrics (1750-2025), 3 global metrics, 6 live layers
+(satellite imagery, fires, floods, air quality, earthquakes, disaster alerts).
+
+### Next data candidates (all free)
+**Historical/annual (OWID-pattern, ~30 min each):**
+oil/gas electricity shares, per-capita electricity use, energy intensity,
+CO2 by sector, consumption-based CO2, aviation emissions, ozone-depleting
+substance consumption, mismanaged plastic share, outdoor air pollution death
+rates, agricultural land share, soil erosion, freshwater species, fish stocks
+overexploited, aquaculture vs capture, marine protected areas, coral
+bleaching events, urbanisation share, sanitation access, waste per capita.
+
+**Higher-resolution time (needs monthly pipeline):**
+ERA5 monthly temperature/precipitation per country (Open-Meteo climate API),
+NSIDC monthly sea ice, NOAA monthly CO2/CH4, Ember monthly electricity mix.
+
+**More live layers (keyless unless noted):**
+- GOES/Himawari geostationary imagery (GIBS, 10-min refresh)
+- NOAA NHC active hurricane tracks + cones (CurrentStorms.json, seasonal)
+- Copernicus EFFIS fire danger forecast (WMS)
+- Smithsonian GVP weekly volcanic activity report
+- USGS river gauges (US), flood stage (live)
+- Open-Meteo current extreme temperatures (grid sample -> hottest/coldest now)
+- Aurora oval forecast (NOAA SWPC, JSON)
+- Lightning (Blitzortung community feed, websocket; licensing to check)
+- Ship traffic density / illegal fishing (Global Fishing Watch API, free key)
+- GRACE groundwater anomaly (monthly raster via NASA)
+
+### God's Eye direction
+Timeline already scrubs 275 years; live layers cover "now". The gap is the
+middle: event playback (e.g. fire season animation via FIRMS archive,
+storm-track history via IBTrACS) and a "what happened today" event ticker
+from GDACS + USGS + FIRMS counts. IBTrACS (1850s+ hurricane tracks) is the
+single highest-value addition for 4D playback.
