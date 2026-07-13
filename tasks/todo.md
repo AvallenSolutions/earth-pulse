@@ -62,11 +62,22 @@ Full plan: [PLAN.md](../PLAN.md).
       ingest if wanted
 - [ ] Living Planet Index: regional only, does not fit country model; skipped
 
-## Phase 5 — Polish & launch
-- [ ] Explainer copy pass, accessibility, mobile, SEO, monitoring, deploy
+## Phase 5 — Polish & launch ✅ LAUNCHED (13 Jul 2026)
+- [x] Globe projection with atmosphere + space sky; globe/flat toggle
+- [x] Visual pass: deep ocean navy, hover glow, gradient legend, SVG
+      play/pause icons, vitals trend arrows (red worsening / green improving)
+- [x] Shareable URL state (?metric=&year=&view=)
+- [x] Country OG share images (next/og); sitemap.xml + robots.txt
+- [x] "What can one person do" actions card on country pages
+- [x] DEPLOYED public: https://earth-pulse-alkatera.vercel.app
+      (avallen-solutions team, SSO protection off, FIRMS/OpenAQ/SITE_URL
+      env vars set on production)
+- [ ] Explainer copy pass (content-writer), formal accessibility audit
+- [ ] Ingest freshness monitoring / weekly cron
+- [ ] Custom domain if wanted (earth-pulse.vercel.app is another account's)
 
 ## Review
-- Phase 0+1 built 13 Jul 2026. Decisions along the way:
+- Phases 0-5 built and launched 13 Jul 2026. Decisions along the way:
   - No basemap tiles: flat Natural Earth boundaries on a dark surface. Zero
     external dependencies; GIBS arrives in Phase 2 for satellite imagery.
   - DB reuses alkatera-lca-verifier project (earth_pulse schema) to stay at £0
@@ -76,7 +87,7 @@ Full plan: [PLAN.md](../PLAN.md).
   - maplibre-gl.css overrides `position: absolute` on the map container; size
     it explicitly (see lessons.md).
 
-## Open questions
-1. Domain name (working title: Earth Pulse)
-2. alkatera-branded or independent? (affects Vercel Hobby vs Pro at deploy)
-3. Include per-country "what can I do" actions?
+## Resolved questions (Tim, 13 Jul 2026)
+1. Name/URL: Earth Pulse, live at earth-pulse-alkatera.vercel.app
+2. Independent tool (not alkatera-branded on the site itself)
+3. "What can one person do" actions: yes, added to country pages
