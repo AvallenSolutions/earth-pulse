@@ -1,0 +1,134 @@
+[
+  {
+    "id": "co2",
+    "name": "CO2 emissions",
+    "unit": "Mt CO2/year",
+    "domain": "climate",
+    "source": "Global Carbon Budget via Our World in Data",
+    "sourceUrl": "https://ourworldindata.org/co2-emissions",
+    "explainer": "Carbon dioxide released each year from burning fossil fuels and industry. The main driver of global warming.",
+    "scale": [
+      0,
+      12000
+    ],
+    "scaleType": "sequential",
+    "stops": [
+      0,
+      50,
+      150,
+      400,
+      1000,
+      2500,
+      6000,
+      12000
+    ],
+    "firstYear": 1750,
+    "lastYear": 2024
+  },
+  {
+    "id": "co2_per_capita",
+    "name": "CO2 emissions per person",
+    "unit": "t CO2/person/year",
+    "domain": "climate",
+    "source": "Global Carbon Budget via Our World in Data",
+    "sourceUrl": "https://ourworldindata.org/co2-emissions",
+    "explainer": "Each person's share of their country's yearly CO2 emissions. A fairer way to compare countries of very different sizes.",
+    "scale": [
+      0,
+      20
+    ],
+    "scaleType": "sequential",
+    "firstYear": 1750,
+    "lastYear": 2024
+  },
+  {
+    "id": "temperature_anomaly",
+    "name": "Temperature anomaly",
+    "unit": "°C vs 1991-2020",
+    "domain": "climate",
+    "source": "Copernicus Climate Change Service (ERA5) via Our World in Data",
+    "sourceUrl": "https://ourworldindata.org/grapher/annual-temperature-anomalies",
+    "explainer": "How much warmer or cooler a country's year was compared with its 1991-2020 average. Watch the map turn red as you move the slider towards today.",
+    "scale": [
+      -2.5,
+      2.5
+    ],
+    "scaleType": "diverging",
+    "firstYear": 1940,
+    "lastYear": 2025
+  },
+  {
+    "id": "renewables_share_energy",
+    "name": "Renewable energy share",
+    "unit": "% of primary energy",
+    "domain": "energy",
+    "source": "Energy Institute Statistical Review via Our World in Data",
+    "sourceUrl": "https://ourworldindata.org/renewable-energy",
+    "explainer": "The slice of a country's energy that comes from renewables such as wind, solar and hydro.",
+    "scale": [
+      0,
+      60
+    ],
+    "scaleType": "sequential",
+    "firstYear": 1965,
+    "lastYear": 2024
+  },
+  {
+    "id": "fossil_share_energy",
+    "name": "Fossil fuel share",
+    "unit": "% of primary energy",
+    "domain": "energy",
+    "source": "Energy Institute Statistical Review via Our World in Data",
+    "sourceUrl": "https://ourworldindata.org/fossil-fuels",
+    "explainer": "The slice of a country's energy still coming from coal, oil and gas. The number the world is trying to shrink.",
+    "scale": [
+      40,
+      100
+    ],
+    "scaleType": "sequential",
+    "firstYear": 1965,
+    "lastYear": 2024
+  },
+  {
+    "id": "energy_per_capita",
+    "name": "Energy use per person",
+    "unit": "kWh/person/year",
+    "domain": "energy",
+    "source": "Energy Institute / Ember via Our World in Data",
+    "sourceUrl": "https://ourworldindata.org/energy-production-consumption",
+    "explainer": "How much energy each person uses in a year, across electricity, transport, heating and industry.",
+    "scale": [
+      0,
+      100000
+    ],
+    "scaleType": "sequential",
+    "stops": [
+      0,
+      3000,
+      8000,
+      15000,
+      25000,
+      40000,
+      60000,
+      100000
+    ],
+    "firstYear": 1965,
+    "lastYear": 2024
+  },
+  {
+    "id": "pm25",
+    "name": "Air pollution (PM2.5)",
+    "unit": "µg/m³ annual mean",
+    "domain": "pollution",
+    "source": "World Bank / van Donkelaar et al. via Our World in Data",
+    "sourceUrl": "https://ourworldindata.org/air-pollution",
+    "explainer": "Average exposure to fine particles small enough to enter the bloodstream. The WHO guideline is 5 µg/m³.",
+    "scale": [
+      0,
+      80
+    ],
+    "scaleType": "sequential",
+    "firstYear": 1998,
+    "lastYear": 2024
+  }
+]

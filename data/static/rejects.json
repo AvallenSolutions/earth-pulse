@@ -1,0 +1,422 @@
+[
+  [
+    "co2:Africa",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Africa (GCP)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Asia",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Asia (GCP)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Asia (excl. China and India)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Central America (GCP)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Europe",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Europe (GCP)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Europe (excl. EU-27)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Europe (excl. EU-28)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:European Union (27)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:European Union (28)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:High-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "co2:International aviation",
+    "no ISO3 code"
+  ],
+  [
+    "co2:International shipping",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Kosovo",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Kuwaiti Oil Fires (GCP)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Low-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Lower-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Middle East (GCP)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Non-OECD (GCP)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:North America",
+    "no ISO3 code"
+  ],
+  [
+    "co2:North America (GCP)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:North America (excl. USA)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:OECD (GCP)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Oceania",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Oceania (GCP)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Ryukyu Islands (GCP)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:South America",
+    "no ISO3 code"
+  ],
+  [
+    "co2:South America (GCP)",
+    "no ISO3 code"
+  ],
+  [
+    "co2:Upper-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "co2:World",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:Africa (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:Antarctica (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:Arctic Ocean (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:Asia (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:Australia (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:Baltic Sea (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:Europe (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:Indian Ocean (NIAID",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:Kosovo",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:Mediterranean Region (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:North America (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:North Atlantic Ocean (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:North Pacific Ocean (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:Oceania (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:South America (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:South Atlantic Ocean (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:South China and Easter Archipelagic Seas (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:South Pacific Ocean (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_annual-temperature-anomalies:Southern Ocean (NIAID)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Africa",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Africa (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Asia",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Asia Pacific (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:CIS (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Central America (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Eastern Africa (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Europe",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Europe (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:European Union (27)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:High-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Lower-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Middle Africa (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Middle East (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Non-OECD (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:North America",
+    "no ISO3 code"
+  ],
+  [
+    "energy:North America (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:OECD (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Oceania",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Other Asia Pacific (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Other CIS (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Other Caribbean (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Other Europe (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Other Middle East (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Other Northern Africa (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Other South America (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Other Southern Africa (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:South America",
+    "no ISO3 code"
+  ],
+  [
+    "energy:South and Central America (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:USSR",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Upper-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Western Africa (EI)",
+    "no ISO3 code"
+  ],
+  [
+    "energy:World",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Czechoslovakia",
+    "no ISO3 code"
+  ],
+  [
+    "energy:East Germany",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Kosovo",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Low-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Serbia and Montenegro",
+    "no ISO3 code"
+  ],
+  [
+    "energy:West Germany",
+    "no ISO3 code"
+  ],
+  [
+    "energy:Yugoslavia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:Africa",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:Akrotiri and Dhekelia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:Asia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:Europe",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:European Union (27)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:High-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:Kosovo",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:Low-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:Lower-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:North America",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:Northern Cyprus",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:Oceania",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:South America",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_pm25-air-pollution:Upper-middle-income countries",
+    "no ISO3 code"
+  ]
+]

@@ -1,0 +1,1752 @@
+[
+  {
+    "iso3": "ABW",
+    "name": "Aruba",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "AFG",
+    "name": "Afghanistan",
+    "continent": "Asia",
+    "region": "Southern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "AGO",
+    "name": "Angola",
+    "continent": "Africa",
+    "region": "Middle Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "AIA",
+    "name": "Anguilla",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "ALA",
+    "name": "Aland Islands",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "ALB",
+    "name": "Albania",
+    "continent": "Europe",
+    "region": "Southern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "AND",
+    "name": "Andorra",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "ANT",
+    "name": "Netherlands Antilles",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "ARE",
+    "name": "United Arab Emirates",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "ARG",
+    "name": "Argentina",
+    "continent": "South America",
+    "region": "South America",
+    "on_map": true
+  },
+  {
+    "iso3": "ARM",
+    "name": "Armenia",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "ASM",
+    "name": "American Samoa",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "ATA",
+    "name": "Antarctica",
+    "continent": "Antarctica",
+    "region": "Antarctica",
+    "on_map": true
+  },
+  {
+    "iso3": "ATF",
+    "name": "French Southern and Antarctic Lands",
+    "continent": "Seven seas (open ocean)",
+    "region": "Seven seas (open ocean)",
+    "on_map": true
+  },
+  {
+    "iso3": "ATG",
+    "name": "Antigua and Barbuda",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "AUS",
+    "name": "Australia",
+    "continent": "Oceania",
+    "region": "Australia and New Zealand",
+    "on_map": true
+  },
+  {
+    "iso3": "AUT",
+    "name": "Austria",
+    "continent": "Europe",
+    "region": "Western Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "AZE",
+    "name": "Azerbaijan",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "BDI",
+    "name": "Burundi",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "BEL",
+    "name": "Belgium",
+    "continent": "Europe",
+    "region": "Western Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "BEN",
+    "name": "Benin",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "BES",
+    "name": "Bonaire Sint Eustatius and Saba",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "BFA",
+    "name": "Burkina Faso",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "BGD",
+    "name": "Bangladesh",
+    "continent": "Asia",
+    "region": "Southern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "BGR",
+    "name": "Bulgaria",
+    "continent": "Europe",
+    "region": "Eastern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "BHR",
+    "name": "Bahrain",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "BHS",
+    "name": "Bahamas",
+    "continent": "North America",
+    "region": "Caribbean",
+    "on_map": true
+  },
+  {
+    "iso3": "BIH",
+    "name": "Bosnia and Herzegovina",
+    "continent": "Europe",
+    "region": "Southern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "BLM",
+    "name": "Saint Barthelemy",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "BLR",
+    "name": "Belarus",
+    "continent": "Europe",
+    "region": "Eastern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "BLZ",
+    "name": "Belize",
+    "continent": "North America",
+    "region": "Central America",
+    "on_map": true
+  },
+  {
+    "iso3": "BMU",
+    "name": "Bermuda",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "BOL",
+    "name": "Bolivia",
+    "continent": "South America",
+    "region": "South America",
+    "on_map": true
+  },
+  {
+    "iso3": "BRA",
+    "name": "Brazil",
+    "continent": "South America",
+    "region": "South America",
+    "on_map": true
+  },
+  {
+    "iso3": "BRB",
+    "name": "Barbados",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "BRN",
+    "name": "Brunei Darussalam",
+    "continent": "Asia",
+    "region": "South-Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "BTN",
+    "name": "Bhutan",
+    "continent": "Asia",
+    "region": "Southern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "BWA",
+    "name": "Botswana",
+    "continent": "Africa",
+    "region": "Southern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "CAF",
+    "name": "Central African Republic",
+    "continent": "Africa",
+    "region": "Middle Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "CAN",
+    "name": "Canada",
+    "continent": "North America",
+    "region": "Northern America",
+    "on_map": true
+  },
+  {
+    "iso3": "CCK",
+    "name": "Cocos Islands",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "CHE",
+    "name": "Switzerland",
+    "continent": "Europe",
+    "region": "Western Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "CHL",
+    "name": "Chile",
+    "continent": "South America",
+    "region": "South America",
+    "on_map": true
+  },
+  {
+    "iso3": "CHN",
+    "name": "China",
+    "continent": "Asia",
+    "region": "Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "CIV",
+    "name": "Côte d'Ivoire",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "CMR",
+    "name": "Cameroon",
+    "continent": "Africa",
+    "region": "Middle Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "COD",
+    "name": "Democratic Republic of the Congo",
+    "continent": "Africa",
+    "region": "Middle Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "COG",
+    "name": "Republic of the Congo",
+    "continent": "Africa",
+    "region": "Middle Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "COK",
+    "name": "Cook Islands",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "COL",
+    "name": "Colombia",
+    "continent": "South America",
+    "region": "South America",
+    "on_map": true
+  },
+  {
+    "iso3": "COM",
+    "name": "Comoros",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "CPV",
+    "name": "Cape Verde",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "CRI",
+    "name": "Costa Rica",
+    "continent": "North America",
+    "region": "Central America",
+    "on_map": true
+  },
+  {
+    "iso3": "CUB",
+    "name": "Cuba",
+    "continent": "North America",
+    "region": "Caribbean",
+    "on_map": true
+  },
+  {
+    "iso3": "CUW",
+    "name": "Curacao",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "CXR",
+    "name": "Christmas Island",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "CYM",
+    "name": "Cayman Islands",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "CYN",
+    "name": "Northern Cyprus",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "CYP",
+    "name": "Cyprus",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "CZE",
+    "name": "Czech Republic",
+    "continent": "Europe",
+    "region": "Eastern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "DEU",
+    "name": "Germany",
+    "continent": "Europe",
+    "region": "Western Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "DJI",
+    "name": "Djibouti",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "DMA",
+    "name": "Dominica",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "DNK",
+    "name": "Denmark",
+    "continent": "Europe",
+    "region": "Northern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "DOM",
+    "name": "Dominican Republic",
+    "continent": "North America",
+    "region": "Caribbean",
+    "on_map": true
+  },
+  {
+    "iso3": "DZA",
+    "name": "Algeria",
+    "continent": "Africa",
+    "region": "Northern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "ECU",
+    "name": "Ecuador",
+    "continent": "South America",
+    "region": "South America",
+    "on_map": true
+  },
+  {
+    "iso3": "EGY",
+    "name": "Egypt",
+    "continent": "Africa",
+    "region": "Northern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "ERI",
+    "name": "Eritrea",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "ESH",
+    "name": "Western Sahara",
+    "continent": "Africa",
+    "region": "Northern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "ESP",
+    "name": "Spain",
+    "continent": "Europe",
+    "region": "Southern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "EST",
+    "name": "Estonia",
+    "continent": "Europe",
+    "region": "Northern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "ETH",
+    "name": "Ethiopia",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "FIN",
+    "name": "Finland",
+    "continent": "Europe",
+    "region": "Northern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "FJI",
+    "name": "Fiji",
+    "continent": "Oceania",
+    "region": "Melanesia",
+    "on_map": true
+  },
+  {
+    "iso3": "FLK",
+    "name": "Falkland Islands / Malvinas",
+    "continent": "South America",
+    "region": "South America",
+    "on_map": true
+  },
+  {
+    "iso3": "FRA",
+    "name": "France",
+    "continent": "Europe",
+    "region": "Western Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "FRO",
+    "name": "Faroe Islands",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "FSM",
+    "name": "Micronesia (country)",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "GAB",
+    "name": "Gabon",
+    "continent": "Africa",
+    "region": "Middle Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "GBR",
+    "name": "United Kingdom",
+    "continent": "Europe",
+    "region": "Northern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "GEO",
+    "name": "Georgia",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "GGY",
+    "name": "Guernsey",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "GHA",
+    "name": "Ghana",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "GIB",
+    "name": "Gibraltar",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "GIN",
+    "name": "Guinea",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "GLP",
+    "name": "Guadeloupe",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "GMB",
+    "name": "The Gambia",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "GNB",
+    "name": "Guinea-Bissau",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "GNQ",
+    "name": "Equatorial Guinea",
+    "continent": "Africa",
+    "region": "Middle Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "GRC",
+    "name": "Greece",
+    "continent": "Europe",
+    "region": "Southern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "GRD",
+    "name": "Grenada",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "GRL",
+    "name": "Greenland",
+    "continent": "North America",
+    "region": "Northern America",
+    "on_map": true
+  },
+  {
+    "iso3": "GTM",
+    "name": "Guatemala",
+    "continent": "North America",
+    "region": "Central America",
+    "on_map": true
+  },
+  {
+    "iso3": "GUF",
+    "name": "French Guiana",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "GUM",
+    "name": "Guam",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "GUY",
+    "name": "Guyana",
+    "continent": "South America",
+    "region": "South America",
+    "on_map": true
+  },
+  {
+    "iso3": "HKG",
+    "name": "Hong Kong",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "HMD",
+    "name": "Heard Island and McDonald Islands",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "HND",
+    "name": "Honduras",
+    "continent": "North America",
+    "region": "Central America",
+    "on_map": true
+  },
+  {
+    "iso3": "HRV",
+    "name": "Croatia",
+    "continent": "Europe",
+    "region": "Southern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "HTI",
+    "name": "Haiti",
+    "continent": "North America",
+    "region": "Caribbean",
+    "on_map": true
+  },
+  {
+    "iso3": "HUN",
+    "name": "Hungary",
+    "continent": "Europe",
+    "region": "Eastern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "IDN",
+    "name": "Indonesia",
+    "continent": "Asia",
+    "region": "South-Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "IMN",
+    "name": "Isle of Man",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "IND",
+    "name": "India",
+    "continent": "Asia",
+    "region": "Southern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "IRL",
+    "name": "Ireland",
+    "continent": "Europe",
+    "region": "Northern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "IRN",
+    "name": "Iran",
+    "continent": "Asia",
+    "region": "Southern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "IRQ",
+    "name": "Iraq",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "ISL",
+    "name": "Iceland",
+    "continent": "Europe",
+    "region": "Northern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "ISR",
+    "name": "Israel",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "ITA",
+    "name": "Italy",
+    "continent": "Europe",
+    "region": "Southern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "JAM",
+    "name": "Jamaica",
+    "continent": "North America",
+    "region": "Caribbean",
+    "on_map": true
+  },
+  {
+    "iso3": "JEY",
+    "name": "Jersey",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "JOR",
+    "name": "Jordan",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "JPN",
+    "name": "Japan",
+    "continent": "Asia",
+    "region": "Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "KAZ",
+    "name": "Kazakhstan",
+    "continent": "Asia",
+    "region": "Central Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "KEN",
+    "name": "Kenya",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "KGZ",
+    "name": "Kyrgyzstan",
+    "continent": "Asia",
+    "region": "Central Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "KHM",
+    "name": "Cambodia",
+    "continent": "Asia",
+    "region": "South-Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "KIR",
+    "name": "Kiribati",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "KNA",
+    "name": "Saint Kitts and Nevis",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "KOR",
+    "name": "Republic of Korea",
+    "continent": "Asia",
+    "region": "Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "KOS",
+    "name": "Kosovo",
+    "continent": "Europe",
+    "region": "Southern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "KWT",
+    "name": "Kuwait",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "LAO",
+    "name": "Lao PDR",
+    "continent": "Asia",
+    "region": "South-Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "LBN",
+    "name": "Lebanon",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "LBR",
+    "name": "Liberia",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "LBY",
+    "name": "Libya",
+    "continent": "Africa",
+    "region": "Northern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "LCA",
+    "name": "Saint Lucia",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "LIE",
+    "name": "Liechtenstein",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "LKA",
+    "name": "Sri Lanka",
+    "continent": "Asia",
+    "region": "Southern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "LSO",
+    "name": "Lesotho",
+    "continent": "Africa",
+    "region": "Southern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "LTU",
+    "name": "Lithuania",
+    "continent": "Europe",
+    "region": "Northern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "LUX",
+    "name": "Luxembourg",
+    "continent": "Europe",
+    "region": "Western Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "LVA",
+    "name": "Latvia",
+    "continent": "Europe",
+    "region": "Northern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "MAC",
+    "name": "Macao",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "MAF",
+    "name": "Saint Martin (French part)",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "MAR",
+    "name": "Morocco",
+    "continent": "Africa",
+    "region": "Northern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "MCO",
+    "name": "Monaco",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "MDA",
+    "name": "Moldova",
+    "continent": "Europe",
+    "region": "Eastern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "MDG",
+    "name": "Madagascar",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "MDV",
+    "name": "Maldives",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "MEX",
+    "name": "Mexico",
+    "continent": "North America",
+    "region": "Central America",
+    "on_map": true
+  },
+  {
+    "iso3": "MHL",
+    "name": "Marshall Islands",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "MKD",
+    "name": "North Macedonia",
+    "continent": "Europe",
+    "region": "Southern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "MLI",
+    "name": "Mali",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "MLT",
+    "name": "Malta",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "MMR",
+    "name": "Myanmar",
+    "continent": "Asia",
+    "region": "South-Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "MNE",
+    "name": "Montenegro",
+    "continent": "Europe",
+    "region": "Southern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "MNG",
+    "name": "Mongolia",
+    "continent": "Asia",
+    "region": "Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "MNP",
+    "name": "Northern Mariana Islands",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "MOZ",
+    "name": "Mozambique",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "MRT",
+    "name": "Mauritania",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "MSR",
+    "name": "Montserrat",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "MTQ",
+    "name": "Martinique",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "MUS",
+    "name": "Mauritius",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "MWI",
+    "name": "Malawi",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "MYS",
+    "name": "Malaysia",
+    "continent": "Asia",
+    "region": "South-Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "MYT",
+    "name": "Mayotte",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "NAM",
+    "name": "Namibia",
+    "continent": "Africa",
+    "region": "Southern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "NCL",
+    "name": "New Caledonia",
+    "continent": "Oceania",
+    "region": "Melanesia",
+    "on_map": true
+  },
+  {
+    "iso3": "NER",
+    "name": "Niger",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "NFK",
+    "name": "Norfolk Island",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "NGA",
+    "name": "Nigeria",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "NIC",
+    "name": "Nicaragua",
+    "continent": "North America",
+    "region": "Central America",
+    "on_map": true
+  },
+  {
+    "iso3": "NIU",
+    "name": "Niue",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "NLD",
+    "name": "Netherlands",
+    "continent": "Europe",
+    "region": "Western Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "NOR",
+    "name": "Norway",
+    "continent": "Europe",
+    "region": "Northern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "NPL",
+    "name": "Nepal",
+    "continent": "Asia",
+    "region": "Southern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "NRU",
+    "name": "Nauru",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "NZL",
+    "name": "New Zealand",
+    "continent": "Oceania",
+    "region": "Australia and New Zealand",
+    "on_map": true
+  },
+  {
+    "iso3": "OMN",
+    "name": "Oman",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "PAK",
+    "name": "Pakistan",
+    "continent": "Asia",
+    "region": "Southern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "PAN",
+    "name": "Panama",
+    "continent": "North America",
+    "region": "Central America",
+    "on_map": true
+  },
+  {
+    "iso3": "PCN",
+    "name": "Pitcairn",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "PER",
+    "name": "Peru",
+    "continent": "South America",
+    "region": "South America",
+    "on_map": true
+  },
+  {
+    "iso3": "PHL",
+    "name": "Philippines",
+    "continent": "Asia",
+    "region": "South-Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "PLW",
+    "name": "Palau",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "PNG",
+    "name": "Papua New Guinea",
+    "continent": "Oceania",
+    "region": "Melanesia",
+    "on_map": true
+  },
+  {
+    "iso3": "POL",
+    "name": "Poland",
+    "continent": "Europe",
+    "region": "Eastern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "PRI",
+    "name": "Puerto Rico",
+    "continent": "North America",
+    "region": "Caribbean",
+    "on_map": true
+  },
+  {
+    "iso3": "PRK",
+    "name": "Dem. Rep. Korea",
+    "continent": "Asia",
+    "region": "Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "PRT",
+    "name": "Portugal",
+    "continent": "Europe",
+    "region": "Southern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "PRY",
+    "name": "Paraguay",
+    "continent": "South America",
+    "region": "South America",
+    "on_map": true
+  },
+  {
+    "iso3": "PSE",
+    "name": "Palestine",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "PYF",
+    "name": "French Polynesia",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "QAT",
+    "name": "Qatar",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "REU",
+    "name": "Reunion",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "ROU",
+    "name": "Romania",
+    "continent": "Europe",
+    "region": "Eastern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "RUS",
+    "name": "Russian Federation",
+    "continent": "Europe",
+    "region": "Eastern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "RWA",
+    "name": "Rwanda",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "SAU",
+    "name": "Saudi Arabia",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "SDN",
+    "name": "Sudan",
+    "continent": "Africa",
+    "region": "Northern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "SEN",
+    "name": "Senegal",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "SGP",
+    "name": "Singapore",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "SGS",
+    "name": "South Georgia and the South Sandwich Islands",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "SHN",
+    "name": "Saint Helena",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "SLB",
+    "name": "Solomon Islands",
+    "continent": "Oceania",
+    "region": "Melanesia",
+    "on_map": true
+  },
+  {
+    "iso3": "SLE",
+    "name": "Sierra Leone",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "SLV",
+    "name": "El Salvador",
+    "continent": "North America",
+    "region": "Central America",
+    "on_map": true
+  },
+  {
+    "iso3": "SMR",
+    "name": "San Marino",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "SOL",
+    "name": "Somaliland",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "SOM",
+    "name": "Somalia",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "SPM",
+    "name": "Saint Pierre and Miquelon",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "SRB",
+    "name": "Serbia",
+    "continent": "Europe",
+    "region": "Southern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "SSD",
+    "name": "South Sudan",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "STP",
+    "name": "Sao Tome and Principe",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "SUR",
+    "name": "Suriname",
+    "continent": "South America",
+    "region": "South America",
+    "on_map": true
+  },
+  {
+    "iso3": "SVK",
+    "name": "Slovakia",
+    "continent": "Europe",
+    "region": "Eastern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "SVN",
+    "name": "Slovenia",
+    "continent": "Europe",
+    "region": "Southern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "SWE",
+    "name": "Sweden",
+    "continent": "Europe",
+    "region": "Northern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "SWZ",
+    "name": "Kingdom of eSwatini",
+    "continent": "Africa",
+    "region": "Southern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "SXM",
+    "name": "Sint Maarten (Dutch part)",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "SYC",
+    "name": "Seychelles",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "SYR",
+    "name": "Syria",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "TCA",
+    "name": "Turks and Caicos Islands",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "TCD",
+    "name": "Chad",
+    "continent": "Africa",
+    "region": "Middle Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "TGO",
+    "name": "Togo",
+    "continent": "Africa",
+    "region": "Western Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "THA",
+    "name": "Thailand",
+    "continent": "Asia",
+    "region": "South-Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "TJK",
+    "name": "Tajikistan",
+    "continent": "Asia",
+    "region": "Central Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "TKL",
+    "name": "Tokelau",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "TKM",
+    "name": "Turkmenistan",
+    "continent": "Asia",
+    "region": "Central Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "TLS",
+    "name": "Timor-Leste",
+    "continent": "Asia",
+    "region": "South-Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "TON",
+    "name": "Tonga",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "TTO",
+    "name": "Trinidad and Tobago",
+    "continent": "North America",
+    "region": "Caribbean",
+    "on_map": true
+  },
+  {
+    "iso3": "TUN",
+    "name": "Tunisia",
+    "continent": "Africa",
+    "region": "Northern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "TUR",
+    "name": "Turkey",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "TUV",
+    "name": "Tuvalu",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "TWN",
+    "name": "Taiwan",
+    "continent": "Asia",
+    "region": "Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "TZA",
+    "name": "Tanzania",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "UGA",
+    "name": "Uganda",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "UKR",
+    "name": "Ukraine",
+    "continent": "Europe",
+    "region": "Eastern Europe",
+    "on_map": true
+  },
+  {
+    "iso3": "URY",
+    "name": "Uruguay",
+    "continent": "South America",
+    "region": "South America",
+    "on_map": true
+  },
+  {
+    "iso3": "USA",
+    "name": "United States",
+    "continent": "North America",
+    "region": "Northern America",
+    "on_map": true
+  },
+  {
+    "iso3": "UZB",
+    "name": "Uzbekistan",
+    "continent": "Asia",
+    "region": "Central Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "VAT",
+    "name": "Vatican",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "VCT",
+    "name": "Saint Vincent and the Grenadines",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "VEN",
+    "name": "Venezuela",
+    "continent": "South America",
+    "region": "South America",
+    "on_map": true
+  },
+  {
+    "iso3": "VGB",
+    "name": "British Virgin Islands",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "VIR",
+    "name": "United States Virgin Islands",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "VNM",
+    "name": "Vietnam",
+    "continent": "Asia",
+    "region": "South-Eastern Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "VUT",
+    "name": "Vanuatu",
+    "continent": "Oceania",
+    "region": "Melanesia",
+    "on_map": true
+  },
+  {
+    "iso3": "WLD",
+    "name": "World",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "WLF",
+    "name": "Wallis and Futuna",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "WSM",
+    "name": "Samoa",
+    "continent": "",
+    "region": "",
+    "on_map": false
+  },
+  {
+    "iso3": "YEM",
+    "name": "Yemen",
+    "continent": "Asia",
+    "region": "Western Asia",
+    "on_map": true
+  },
+  {
+    "iso3": "ZAF",
+    "name": "South Africa",
+    "continent": "Africa",
+    "region": "Southern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "ZMB",
+    "name": "Zambia",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  },
+  {
+    "iso3": "ZWE",
+    "name": "Zimbabwe",
+    "continent": "Africa",
+    "region": "Eastern Africa",
+    "on_map": true
+  }
+]
