@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { LineChart } from "@/components/LineChart";
+import { ActionsCard } from "@/components/ActionsCard";
 import {
   DOMAIN_LABELS,
   formatValue,
@@ -46,9 +47,12 @@ export default async function CountryPage({
   if (!country || iso3 === "WLD") notFound();
 
   const metrics = load<Metric[]>("metrics.json");
+  const seriesByMetric: Record<string, SeriesFile> = Object.fromEntries(
+    metrics.map((m) => [m.id, load<SeriesFile>(`series/${m.id}.json`)])
+  );
   const charts = metrics
     .map((m) => {
-      const series = load<SeriesFile>(`series/${m.id}.json`)[iso3];
+      const series = seriesByMetric[m.id][iso3];
       return series && series.length > 1 ? { metric: m, series } : null;
     })
     .filter(Boolean) as { metric: Metric; series: [number, number][] }[];
@@ -120,6 +124,10 @@ export default async function CountryPage({
             </div>
           </section>
         ))}
+
+        {charts.length > 0 && (
+          <ActionsCard seriesByMetric={seriesByMetric} iso3={iso3} />
+        )}
       </div>
     </div>
   );
