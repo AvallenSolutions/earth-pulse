@@ -145,6 +145,7 @@ export function MapExplorer({
   const [disHistOn, setDisHistOn] = useState(false);
   const [ticker, setTicker] = useState<TickerItem[]>([]);
   const [vitalsModal, setVitalsModal] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [airStatus, setAirStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   // Init map once
@@ -1097,231 +1098,311 @@ export function MapExplorer({
     window.location.href = `/country/${c.iso3}`;
   }, []);
 
+  // Shared control bodies, reused in the desktop floating panels and the
+  // mobile burger drawer so there is a single source of truth.
+  const liveLayersBody = (
+    <div className="space-y-0.5">
+      <div className="pt-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
+        Live now
+      </div>
+      <LayerRow label="Satellite imagery" checked={satOn} onChange={setSatOn} />
+      {satOn && (
+        <input
+          type="date"
+          value={satDate}
+          min="2012-01-20"
+          max={latestImageryDate()}
+          onChange={(e) => e.target.value && setSatDate(e.target.value)}
+          aria-label="Imagery date"
+          className="mb-1 w-full rounded-md border border-white/10 bg-black/30 px-2 py-1 text-xs text-white [color-scheme:dark]"
+        />
+      )}
+      <LayerRow label="Active fires (24h)" dot="#f0502a" checked={firesOn} onChange={setFiresOn} />
+      <LayerRow label="River flood alerts" dot="#3987e5" checked={floodsOn} onChange={setFloodsOn} />
+      <LayerRow label="Air quality now" dot="#0ca30c" checked={airOn} onChange={setAirOn} />
+      {airOn && airStatus === "loading" && (
+        <p className="pl-4 text-[10px] text-[#898781]">Loading stations…</p>
+      )}
+      {airOn && airStatus === "error" && (
+        <p className="pl-4 text-[10px] text-[#898781]">Feed unavailable right now.</p>
+      )}
+      {airOn && airStatus === "ready" && (
+        <LegendRow
+          items={AIR_BREAKS.labels.map((l, i) => ({
+            label: `${l} µg/m³`,
+            colour: AIR_BREAKS.colours[i],
+          }))}
+        />
+      )}
+      <LayerRow label="Earthquakes (24h)" dot="#fb9a3c" checked={quakesOn} onChange={setQuakesOn} />
+      {quakesOn && (
+        <LegendRow
+          items={[
+            { label: "M1-3", colour: "#fed976" },
+            { label: "M3-4.5", colour: "#fb9a3c" },
+            { label: "M4.5-6", colour: "#f0502a" },
+            { label: "M6+", colour: "#e01515" },
+          ]}
+        />
+      )}
+      <LayerRow label="Disaster alerts" dot="#9085e9" checked={disastersOn} onChange={setDisastersOn} />
+      {disastersOn && (
+        <LegendRow
+          items={[
+            { label: "cyclone", colour: "#9085e9" },
+            { label: "flood", colour: "#3987e5" },
+            { label: "drought", colour: "#e0a355" },
+            { label: "volcano", colour: "#e34948" },
+          ]}
+        />
+      )}
+      <div className="mt-2 border-t border-white/10 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
+        History · follows the year slider
+      </div>
+      <LayerRow label={`Storm tracks · ${year}`} dot="#f0502a" checked={stormsOn} onChange={setStormsOn} />
+      {stormsOn && (
+        <>
+          <div className="flex flex-wrap gap-1 pb-1 pl-4">
+            {STORM_CATS.labels.map((l, i) => {
+              const active = stormCats.includes(i);
+              return (
+                <button
+                  key={l}
+                  onClick={() =>
+                    setStormCats((cats) =>
+                      cats.includes(i) ? cats.filter((c) => c !== i) : [...cats, i]
+                    )
+                  }
+                  aria-pressed={active}
+                  className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] transition-colors ${
+                    active
+                      ? "border-white/20 bg-white/10 text-[#c3c2b7]"
+                      : "border-white/5 text-[#52514e]"
+                  }`}
+                >
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{
+                      background: STORM_CATS.colours[i],
+                      opacity: active ? 1 : 0.3,
+                    }}
+                  />
+                  {l}
+                </button>
+              );
+            })}
+          </div>
+          <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+            Every tropical cyclone since 1842. Tap a category to hide it; press
+            play to replay the seasons.
+          </p>
+        </>
+      )}
+      <LayerRow label={`Earthquakes M6+ · ${year}`} dot="#f0502a" checked={quakeHistOn} onChange={setQuakeHistOn} />
+      {quakeHistOn && (
+        <>
+          <LegendRow
+            items={[
+              { label: "M6-7", colour: "#fb9a3c" },
+              { label: "M7-8", colour: "#f0502a" },
+              { label: "M8+", colour: "#e01515" },
+            ]}
+          />
+          <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+            USGS archive, 1900 onwards.
+          </p>
+        </>
+      )}
+      <LayerRow label={`Disasters · ${year}`} dot="#3987e5" checked={disHistOn} onChange={setDisHistOn} />
+      {disHistOn && (
+        <>
+          <LegendRow
+            items={[
+              { label: "cyclone", colour: "#9085e9" },
+              { label: "flood", colour: "#3987e5" },
+              { label: "drought", colour: "#e0a355" },
+              { label: "wildfire", colour: "#ee6a30" },
+              { label: "volcano", colour: "#e34948" },
+            ]}
+          />
+          <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+            GDACS archive, 2000 onwards (wildfires from 2022).
+          </p>
+        </>
+      )}
+    </div>
+  );
+
+  const metricPickerBody = (
+    <>
+      <div className="pr-1 lg:max-h-[calc(100dvh-360px)] lg:overflow-y-auto">
+        {domains.map((d) => (
+          <div key={d} className="mb-2 last:mb-0">
+            <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-[#898781]">
+              {DOMAIN_LABELS[d] ?? d}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {metrics
+                .filter((m) => m.domain === d)
+                .map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => {
+                      setMetricId(m.id);
+                      setYear((y) => Math.min(Math.max(y, m.firstYear), m.lastYear));
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`rounded-full px-2.5 py-1 text-xs transition-colors ${
+                      m.id === metricId
+                        ? "bg-white text-black"
+                        : "bg-white/10 text-[#c3c2b7] hover:bg-white/20"
+                    }`}
+                  >
+                    {m.name}
+                  </button>
+                ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 border-t border-white/10 pt-2 text-xs leading-snug text-[#c3c2b7]">
+        {metric.explainer}{" "}
+        <a
+          href={metric.sourceUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[#6da7ec] hover:underline"
+        >
+          Source: {metric.source}
+        </a>
+      </p>
+      <div className="mt-2">{legendEl}</div>
+    </>
+  );
+
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-[#0d0d0d]">
       {/* maplibre-gl.css forces position:relative on this element, so size it
           explicitly rather than relying on absolute inset */}
       <div ref={mapContainer} className="absolute inset-0 h-full w-full" />
 
-      {/* Header */}
-      <div className="absolute left-4 top-4 z-10">
-        <h1 className="pointer-events-none text-xl font-semibold tracking-tight text-white">
-          Earth Pulse
-        </h1>
-        <p className="pointer-events-none text-sm text-[#c3c2b7]">
-          The state of the planet, {metric.firstYear} to today
-        </p>
-        <div className="mt-1 flex gap-4">
-          <a href="/planet" className="text-sm text-[#6da7ec] hover:underline">
-            Planet trends →
-          </a>
-          <a href="/compare" className="text-sm text-[#6da7ec] hover:underline">
-            Compare countries →
-          </a>
-        </div>
-        <div className="mt-2 xl:hidden">
-          <VitalsStrip vitals={vitals} variant="inline" onSelect={setVitalsModal} />
+      {/* Header + mobile burger */}
+      <div className="absolute left-3 top-3 z-30 flex items-center gap-2 lg:left-4 lg:top-4 lg:block">
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          aria-label="Open controls"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/10 bg-[#161615]/95 text-white backdrop-blur lg:hidden"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path
+              d="M2 4h12M2 8h12M2 12h12"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+        <div>
+          <h1 className="pointer-events-none text-lg font-semibold tracking-tight text-white lg:text-xl">
+            Earth Pulse
+          </h1>
+          <p className="pointer-events-none hidden text-sm text-[#c3c2b7] lg:block">
+            The state of the planet, {metric.firstYear} to today
+          </p>
+          <div className="mt-1 hidden flex-wrap gap-x-4 gap-y-0.5 text-sm lg:flex">
+            <a href="/planet" className="text-[#6da7ec] hover:underline">
+              Planet trends →
+            </a>
+            <a href="/compare" className="text-[#6da7ec] hover:underline">
+              Compare countries →
+            </a>
+          </div>
         </div>
       </div>
 
-      {/* Planet vitals */}
+      {/* Planet vitals: floating pill (lg+) */}
       <VitalsStrip vitals={vitals} onSelect={setVitalsModal} />
 
-      {/* Search */}
-      <div className="absolute right-4 top-4 z-20 w-64">
+      {/* Planet vitals: horizontal strip on mobile/tablet */}
+      <div className="absolute inset-x-3 top-[3.75rem] z-10 lg:hidden">
+        <VitalsStrip vitals={vitals} variant="inline" onSelect={setVitalsModal} />
+      </div>
+
+      {/* Search (desktop) */}
+      <div className="absolute right-4 top-4 z-30 hidden w-64 lg:block">
         <CountrySearch countries={countries} onSelect={onSelectCountry} />
       </div>
 
-      {/* Live layers */}
-      <div className="absolute right-4 top-16 z-10 w-64">
+      {/* Current-metric legend chip (mobile), top-left under the vitals strip */}
+      <button
+        onClick={() => setMobileMenuOpen(true)}
+        className="absolute left-3 top-[7.25rem] z-10 w-[62%] max-w-[15rem] rounded-xl border border-white/10 bg-[#161615]/95 p-2 text-left backdrop-blur lg:hidden"
+      >
+        {legendEl}
+      </button>
+
+      {/* Live layers (desktop floating) */}
+      <div className="absolute right-4 top-16 z-10 hidden w-64 lg:block">
         <Panel
           title="Live layers"
           badge={liveCount ? `${liveCount} on` : undefined}
           defaultOpen={false}
         >
-          <div className="space-y-0.5">
-            <div className="pt-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
-              Live now
-            </div>
-            <LayerRow label="Satellite imagery" checked={satOn} onChange={setSatOn} />
-            {satOn && (
-              <input
-                type="date"
-                value={satDate}
-                min="2012-01-20"
-                max={latestImageryDate()}
-                onChange={(e) => e.target.value && setSatDate(e.target.value)}
-                aria-label="Imagery date"
-                className="mb-1 w-full rounded-md border border-white/10 bg-black/30 px-2 py-1 text-xs text-white [color-scheme:dark]"
-              />
-            )}
-            <LayerRow label="Active fires (24h)" dot="#f0502a" checked={firesOn} onChange={setFiresOn} />
-            <LayerRow label="River flood alerts" dot="#3987e5" checked={floodsOn} onChange={setFloodsOn} />
-            <LayerRow label="Air quality now" dot="#0ca30c" checked={airOn} onChange={setAirOn} />
-            {airOn && airStatus === "loading" && (
-              <p className="pl-4 text-[10px] text-[#898781]">Loading stations…</p>
-            )}
-            {airOn && airStatus === "error" && (
-              <p className="pl-4 text-[10px] text-[#898781]">Feed unavailable right now.</p>
-            )}
-            {airOn && airStatus === "ready" && (
-              <LegendRow
-                items={AIR_BREAKS.labels.map((l, i) => ({
-                  label: `${l} µg/m³`,
-                  colour: AIR_BREAKS.colours[i],
-                }))}
-              />
-            )}
-            <LayerRow label="Earthquakes (24h)" dot="#fb9a3c" checked={quakesOn} onChange={setQuakesOn} />
-            {quakesOn && (
-              <LegendRow
-                items={[
-                  { label: "M1-3", colour: "#fed976" },
-                  { label: "M3-4.5", colour: "#fb9a3c" },
-                  { label: "M4.5-6", colour: "#f0502a" },
-                  { label: "M6+", colour: "#e01515" },
-                ]}
-              />
-            )}
-            <LayerRow label="Disaster alerts" dot="#9085e9" checked={disastersOn} onChange={setDisastersOn} />
-            {disastersOn && (
-              <LegendRow
-                items={[
-                  { label: "cyclone", colour: "#9085e9" },
-                  { label: "flood", colour: "#3987e5" },
-                  { label: "drought", colour: "#e0a355" },
-                  { label: "volcano", colour: "#e34948" },
-                ]}
-              />
-            )}
-            <div className="mt-2 border-t border-white/10 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
-              History · follows the year slider
-            </div>
-            <LayerRow label={`Storm tracks · ${year}`} dot="#f0502a" checked={stormsOn} onChange={setStormsOn} />
-            {stormsOn && (
-              <>
-                <div className="flex flex-wrap gap-1 pb-1 pl-4">
-                  {STORM_CATS.labels.map((l, i) => {
-                    const active = stormCats.includes(i);
-                    return (
-                      <button
-                        key={l}
-                        onClick={() =>
-                          setStormCats((cats) =>
-                            cats.includes(i)
-                              ? cats.filter((c) => c !== i)
-                              : [...cats, i]
-                          )
-                        }
-                        aria-pressed={active}
-                        className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] transition-colors ${
-                          active
-                            ? "border-white/20 bg-white/10 text-[#c3c2b7]"
-                            : "border-white/5 text-[#52514e]"
-                        }`}
-                      >
-                        <span
-                          className="inline-block h-2 w-2 rounded-full"
-                          style={{
-                            background: STORM_CATS.colours[i],
-                            opacity: active ? 1 : 0.3,
-                          }}
-                        />
-                        {l}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
-                  Every tropical cyclone since 1842. Tap a category to hide it;
-                  press play to replay the seasons.
-                </p>
-              </>
-            )}
-            <LayerRow label={`Earthquakes M6+ · ${year}`} dot="#f0502a" checked={quakeHistOn} onChange={setQuakeHistOn} />
-            {quakeHistOn && (
-              <>
-                <LegendRow
-                  items={[
-                    { label: "M6-7", colour: "#fb9a3c" },
-                    { label: "M7-8", colour: "#f0502a" },
-                    { label: "M8+", colour: "#e01515" },
-                  ]}
-                />
-                <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
-                  USGS archive, 1900 onwards.
-                </p>
-              </>
-            )}
-            <LayerRow label={`Disasters · ${year}`} dot="#3987e5" checked={disHistOn} onChange={setDisHistOn} />
-            {disHistOn && (
-              <>
-                <LegendRow
-                  items={[
-                    { label: "cyclone", colour: "#9085e9" },
-                    { label: "flood", colour: "#3987e5" },
-                    { label: "drought", colour: "#e0a355" },
-                    { label: "wildfire", colour: "#ee6a30" },
-                    { label: "volcano", colour: "#e34948" },
-                  ]}
-                />
-                <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
-                  GDACS archive, 2000 onwards (wildfires from 2022).
-                </p>
-              </>
-            )}
-          </div>
+          {liveLayersBody}
         </Panel>
       </div>
 
-      {/* Metric picker */}
-      <div className="absolute left-4 top-52 z-10 w-[21rem] max-w-[85vw] xl:top-28">
+      {/* Metric picker (desktop floating) */}
+      <div className="absolute left-4 top-28 z-20 hidden w-[21rem] max-w-[85vw] lg:block">
         <Panel title="Map data" defaultOpen={false} summary={legendEl}>
-          <div className="max-h-[calc(100dvh-360px)] overflow-y-auto pr-1">
-            {domains.map((d) => (
-              <div key={d} className="mb-2 last:mb-0">
-                <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-[#898781]">
-                  {DOMAIN_LABELS[d] ?? d}
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {metrics
-                    .filter((m) => m.domain === d)
-                    .map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => {
-                          setMetricId(m.id);
-                          setYear((y) =>
-                            Math.min(Math.max(y, m.firstYear), m.lastYear)
-                          );
-                        }}
-                        className={`rounded-full px-2.5 py-1 text-xs transition-colors ${
-                          m.id === metricId
-                            ? "bg-white text-black"
-                            : "bg-white/10 text-[#c3c2b7] hover:bg-white/20"
-                        }`}
-                      >
-                        {m.name}
-                      </button>
-                    ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="mt-2 border-t border-white/10 pt-2 text-xs leading-snug text-[#c3c2b7]">
-            {metric.explainer}{" "}
-            <a
-              href={metric.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[#6da7ec] hover:underline"
-            >
-              Source: {metric.source}
-            </a>
-          </p>
-          <div className="mt-2">{legendEl}</div>
+          {metricPickerBody}
         </Panel>
       </div>
+
+      {/* Mobile controls drawer */}
+      {mobileMenuOpen && (
+        <div className="absolute inset-0 z-40 lg:hidden" role="dialog" aria-modal="true">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm flex-col gap-4 overflow-y-auto border-r border-white/10 bg-[#0d0d0d] p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold tracking-tight text-white">
+                Earth Pulse
+              </span>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close controls"
+                className="grid h-8 w-8 place-items-center rounded-full text-[#898781] hover:bg-white/10 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <CountrySearch countries={countries} onSelect={onSelectCountry} />
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              <a href="/planet" className="text-[#6da7ec] hover:underline">
+                Planet trends →
+              </a>
+              <a href="/compare" className="text-[#6da7ec] hover:underline">
+                Compare countries →
+              </a>
+            </div>
+            <div>
+              <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#898781]">
+                Map data
+              </div>
+              {metricPickerBody}
+            </div>
+            <div className="border-t border-white/10 pt-3">
+              <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#898781]">
+                Live layers{liveCount ? ` · ${liveCount} on` : ""}
+              </div>
+              {liveLayersBody}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Live event ticker (news crawl, pinned to the very bottom) */}
       <EventTicker items={ticker} onSelect={showTickerEvent} />
@@ -1415,7 +1496,7 @@ export function MapExplorer({
           <span>{sliderMin}</span>
           {projection ? (
             <span className="flex items-center gap-2">
-              <span>‹ observed to {metric.lastYear}</span>
+              <span className="hidden sm:inline">‹ observed to {metric.lastYear}</span>
               <span className="flex gap-1">
                 {SCENARIOS.map((sc) => (
                   <button
@@ -1440,7 +1521,7 @@ export function MapExplorer({
                   </button>
                 ))}
               </span>
-              <span>CMIP6 projections ›</span>
+              <span className="hidden sm:inline">CMIP6 projections ›</span>
             </span>
           ) : (
             <span>{metric.unit}</span>

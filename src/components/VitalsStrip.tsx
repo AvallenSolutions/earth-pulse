@@ -64,13 +64,13 @@ export function VitalsStrip({
     <div
       className={
         compact
-          ? "pointer-events-none"
-          : "pointer-events-none absolute left-1/2 top-4 z-10 hidden -translate-x-1/2 xl:block"
+          ? ""
+          : "pointer-events-none absolute left-1/2 top-4 z-10 hidden -translate-x-1/2 lg:block"
       }
     >
       <div
         className={`flex divide-x divide-white/10 rounded-xl border border-white/10 bg-[#1a1a19]/90 backdrop-blur ${
-          compact ? "w-fit max-w-[calc(100vw-2rem)] overflow-x-auto" : ""
+          compact ? "max-w-full overflow-x-auto" : ""
         }`}
       >
         {items.map((it) => (
