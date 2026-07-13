@@ -53,7 +53,11 @@ body {
   border: none;
 }
 
-/* Keep MapLibre attribution readable on the dark surface */
+/* Keep MapLibre attribution readable on the dark surface, lifted clear of
+   the news ticker bar pinned to the very bottom */
+.maplibregl-ctrl-bottom-right {
+  bottom: 30px !important;
+}
 .maplibregl-ctrl-attrib {
   background: rgba(26, 26, 25, 0.8) !important;
 }
@@ -61,4 +65,43 @@ body {
 .maplibregl-ctrl-attrib a {
   color: #898781 !important;
   font-size: 10px;
+}
+
+/* Live event ticker: a continuous news crawl */
+@keyframes ep-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.ep-ticker-track {
+  animation-name: ep-ticker;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.ep-ticker-mask:hover .ep-ticker-track {
+  animation-play-state: paused;
+}
+.ep-ticker-mask {
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 28px,
+    #000 calc(100% - 28px),
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 28px,
+    #000 calc(100% - 28px),
+    transparent
+  );
+}
+@media (prefers-reduced-motion: reduce) {
+  .ep-ticker-track {
+    animation: none;
+  }
 }

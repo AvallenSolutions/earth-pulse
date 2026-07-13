@@ -10,6 +10,7 @@ import { Sparkline } from "./Sparkline";
 import { CountrySearch } from "./CountrySearch";
 import { VitalsStrip } from "./VitalsStrip";
 import { VitalsModal } from "./VitalsModal";
+import { EventTicker, type TickerItem } from "./EventTicker";
 import { Panel } from "./Panel";
 import { EventPopup, type MapEvent } from "./EventPopup";
 
@@ -142,10 +143,7 @@ export function MapExplorer({
   const stormCatsRef = useRef(stormCats);
   const [quakeHistOn, setQuakeHistOn] = useState(false);
   const [disHistOn, setDisHistOn] = useState(false);
-  const [ticker, setTicker] = useState<
-    { lon: number; lat: number; label: string; event: MapEvent }[]
-  >([]);
-  const [tickerI, setTickerI] = useState(0);
+  const [ticker, setTicker] = useState<TickerItem[]>([]);
   const [vitalsModal, setVitalsModal] = useState<string | null>(null);
   const [airStatus, setAirStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
@@ -942,7 +940,7 @@ export function MapExplorer({
           events: { lon: number; lat: number; type: string; level: string; name: string; country: string; severity: string; from: string; to: string; eventid: number }[];
         };
         if (!alive) return;
-        const items: { sev: number; lon: number; lat: number; label: string; event: MapEvent }[] = [];
+        const items: TickerItem[] = [];
         for (const q of quakes.filter((x) => x.mag >= 4.8)) {
           items.push({
             sev: q.mag >= 6 ? 2.5 : 1,
@@ -980,12 +978,6 @@ export function MapExplorer({
       alive = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (ticker.length < 2) return;
-    const t = setInterval(() => setTickerI((i) => (i + 1) % ticker.length), 6000);
-    return () => clearInterval(t);
-  }, [ticker]);
 
   const showTickerEvent = useCallback((item: { lon: number; lat: number; event: MapEvent }) => {
     const map = mapRef.current;
@@ -1331,32 +1323,13 @@ export function MapExplorer({
         </Panel>
       </div>
 
-      {/* Live event ticker */}
-      {ticker.length > 0 && (
-        <button
-          onClick={() => showTickerEvent(ticker[tickerI])}
-          className="absolute bottom-[5.75rem] left-1/2 z-10 flex max-w-[min(600px,86vw)] -translate-x-1/2 items-center gap-2.5 rounded-full border border-white/10 bg-[#161615]/95 py-2 pl-3 pr-4 text-left backdrop-blur transition-colors hover:border-white/25"
-        >
-          <span className="relative flex h-2 w-2 shrink-0">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#e34948] opacity-60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#e34948]" />
-          </span>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#e34948]">
-            Live
-          </span>
-          <span className="truncate text-xs text-[#c3c2b7]">
-            {ticker[tickerI].label}
-          </span>
-          <span className="shrink-0 text-[10px] tabular-nums text-[#898781]">
-            {tickerI + 1}/{ticker.length}
-          </span>
-        </button>
-      )}
+      {/* Live event ticker (news crawl, pinned to the very bottom) */}
+      <EventTicker items={ticker} onSelect={showTickerEvent} />
 
       {/* Globe / flat toggle */}
       <button
         onClick={() => setGlobeOn((g) => !g)}
-        className="absolute bottom-24 right-4 z-10 flex items-center gap-2 rounded-full border border-white/10 bg-[#1a1a19]/90 px-3 py-2 text-xs text-[#c3c2b7] backdrop-blur transition-colors hover:bg-[#1a1a19] hover:text-white"
+        className="absolute bottom-[6.75rem] right-4 z-10 flex items-center gap-2 rounded-full border border-white/10 bg-[#1a1a19]/90 px-3 py-2 text-xs text-[#c3c2b7] backdrop-blur transition-colors hover:bg-[#1a1a19] hover:text-white"
         aria-pressed={globeOn}
       >
         <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
@@ -1380,7 +1353,7 @@ export function MapExplorer({
       </button>
 
       {/* Time slider */}
-      <div className="absolute inset-x-0 bottom-6 z-10 mx-auto w-[min(680px,92%)] rounded-xl border border-white/10 bg-[#1a1a19]/90 px-4 py-3 backdrop-blur">
+      <div className="absolute inset-x-0 bottom-9 z-10 mx-auto w-[min(680px,92%)] rounded-xl border border-white/10 bg-[#1a1a19]/90 px-4 py-2 backdrop-blur">
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
@@ -1388,7 +1361,7 @@ export function MapExplorer({
               setPlaying((p) => !p);
             }}
             aria-label={playing ? "Pause" : "Play"}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-black transition-transform hover:scale-105"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-black transition-transform hover:scale-105"
           >
             {playing ? (
               <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
