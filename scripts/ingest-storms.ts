@@ -62,7 +62,6 @@ async function main() {
     const lat = Number(c[idx.LAT]);
     let lon = Number(c[idx.LON]);
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-    if (lon > 180) lon -= 360;
     const wind =
       Number(c[idx.WMO_WIND]) || Number(c[idx.USA_WIND]) || 0;
 
@@ -82,6 +81,17 @@ async function main() {
       });
     }
     const storm = storms.get(sid)!;
+    // Unwrap longitude so tracks crossing the antimeridian stay continuous
+    // (MapLibre renders lngs beyond ±180 on the adjacent world copy). A raw
+    // wrap from +179.9 to -179.9 would otherwise draw a straight line around
+    // the whole planet.
+    const prev = storm.points[storm.points.length - 1];
+    if (prev) {
+      while (lon - prev[0] > 180) lon -= 360;
+      while (lon - prev[0] < -180) lon += 360;
+    } else if (lon > 180) {
+      lon -= 360;
+    }
     storm.points.push([
       Number(lon.toFixed(1)),
       Number(lat.toFixed(1)),

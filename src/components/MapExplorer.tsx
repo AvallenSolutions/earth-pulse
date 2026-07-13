@@ -24,6 +24,10 @@ const STORM_CATS = {
 };
 
 const stormsCache = new Map<number, StormYear>();
+const quakeHistCache = new Map<number, { quakes: QuakeRec[] }>();
+const disHistCache = new Map<number, { events: DisasterRec[] }>();
+type QuakeRec = { lon: number; lat: number; mag: number; depth: number; place: string; time: number; url: string };
+type DisasterRec = { lon: number; lat: number; type: string; level: string; name: string; country: string; severity: string; from: string; to: string; eventid: number };
 type StormYear = {
   storms: { id: string; name: string; cat: number; maxWind: number; points: [number, number, number][] }[];
 };
@@ -106,6 +110,10 @@ export function MapExplorer({
   const [quakesOn, setQuakesOn] = useState(false);
   const [disastersOn, setDisastersOn] = useState(false);
   const [stormsOn, setStormsOn] = useState(false);
+  const [stormCats, setStormCats] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+  const stormCatsRef = useRef(stormCats);
+  const [quakeHistOn, setQuakeHistOn] = useState(false);
+  const [disHistOn, setDisHistOn] = useState(false);
   const [ticker, setTicker] = useState<
     { lon: number; lat: number; label: string; event: MapEvent }[]
   >([]);
@@ -266,7 +274,7 @@ export function MapExplorer({
         top: Math.min(Math.max(e.point.y - 10, 8), h - 240),
       });
     };
-    map.on("click", "quakes", (e) => {
+    for (const layerId of ["quakes", "quakehist"]) map.on("click", layerId, (e) => {
       const p = e.features?.[0]?.properties;
       if (!p) return;
       popupAt(e, {
@@ -278,7 +286,7 @@ export function MapExplorer({
         url: String(p.url ?? ""),
       });
     });
-    map.on("click", "disasters", (e) => {
+    for (const layerId of ["disasters", "dishist"]) map.on("click", layerId, (e) => {
       const p = e.features?.[0]?.properties;
       if (!p) return;
       popupAt(e, {
@@ -304,7 +312,7 @@ export function MapExplorer({
         year: Number(p.year),
       });
     });
-    for (const layer of ["quakes", "disasters", "storms"]) {
+    for (const layer of ["quakes", "disasters", "storms", "quakehist", "dishist"]) {
       map.on("mouseenter", layer, () => {
         map.getCanvas().style.cursor = "pointer";
       });
@@ -313,7 +321,7 @@ export function MapExplorer({
       // event dots sit above countries; don't navigate through them
       const hits = map
         .queryRenderedFeatures(e.point, {
-          layers: ["quakes", "disasters", "storms"].filter((l) => map.getLayer(l)),
+          layers: ["quakes", "disasters", "storms", "quakehist", "dishist"].filter((l) => map.getLayer(l)),
         })
         .length;
       if (hits > 0) return;
@@ -607,7 +615,9 @@ export function MapExplorer({
       try {
         if (!stormsCache.has(year)) {
           const res = await fetch(`/data/storms/${year}.json`);
-          stormsCache.set(year, res.ok ? await res.json() : { storms: [] });
+          if (res.ok) stormsCache.set(year, await res.json());
+          else if (res.status === 404) stormsCache.set(year, { storms: [] });
+          else return; // transient failure: retry next toggle/scrub
         }
         const { storms } = stormsCache.get(year)!;
         if (!alive || !mapRef.current) return;
@@ -661,6 +671,9 @@ export function MapExplorer({
             },
           });
         }
+        map.setFilter("storms", [
+          "in", ["get", "cat"], ["literal", stormCatsRef.current],
+        ]);
       } catch {
         /* season file missing; nothing to draw */
       }
@@ -669,6 +682,155 @@ export function MapExplorer({
       alive = false;
     };
   }, [stormsOn, year, mapReady]);
+
+  // Storm category filter (ref keeps the async layer-create path in sync)
+  useEffect(() => {
+    stormCatsRef.current = stormCats;
+    const map = mapRef.current;
+    if (!map || !mapReady || !map.getLayer("storms")) return;
+    map.setFilter("storms", ["in", ["get", "cat"], ["literal", stormCats]]);
+  }, [stormCats, stormsOn, year, mapReady]);
+
+  // Historical M6+ earthquakes (USGS archive, 1900+), follows the year slider
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    let alive = true;
+    if (!quakeHistOn) {
+      if (map.getLayer("quakehist")) map.removeLayer("quakehist");
+      if (map.getSource("quakehist")) map.removeSource("quakehist");
+      return;
+    }
+    (async () => {
+      try {
+        if (!quakeHistCache.has(year)) {
+          const res = await fetch(`/data/quakes-history/${year}.json`);
+          if (res.ok) quakeHistCache.set(year, await res.json());
+          else if (res.status === 404) quakeHistCache.set(year, { quakes: [] });
+          else return;
+        }
+        const { quakes } = quakeHistCache.get(year)!;
+        if (!alive || !mapRef.current) return;
+        const geojson = {
+          type: "FeatureCollection" as const,
+          features: quakes.map((q) => ({
+            type: "Feature" as const,
+            properties: q,
+            geometry: { type: "Point" as const, coordinates: [q.lon, q.lat] },
+          })),
+        };
+        const src = map.getSource("quakehist") as maplibregl.GeoJSONSource | undefined;
+        if (src) {
+          src.setData(geojson);
+        } else {
+          map.addSource("quakehist", {
+            type: "geojson",
+            data: geojson,
+            attribution: 'Quake archive: <a href="https://earthquake.usgs.gov">USGS</a>',
+          });
+          map.addLayer({
+            id: "quakehist",
+            type: "circle",
+            source: "quakehist",
+            paint: {
+              "circle-radius": [
+                "interpolate", ["linear"], ["get", "mag"],
+                6, 3, 7, 6, 8, 11, 9, 18,
+              ],
+              "circle-color": [
+                "step", ["get", "mag"],
+                "#fb9a3c", 7, "#f0502a", 8, "#e01515",
+              ],
+              "circle-opacity": 0.75,
+              "circle-stroke-color": "#0d0d0d",
+              "circle-stroke-width": 0.5,
+            },
+          });
+        }
+      } catch {
+        /* year file missing */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [quakeHistOn, year, mapReady]);
+
+  // Historical disaster events (GDACS archive, 2000+), follows the year slider
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    let alive = true;
+    if (!disHistOn) {
+      if (map.getLayer("dishist")) map.removeLayer("dishist");
+      if (map.getSource("dishist")) map.removeSource("dishist");
+      return;
+    }
+    (async () => {
+      try {
+        if (!disHistCache.has(year)) {
+          const res = await fetch(`/data/disasters-history/${year}.json`);
+          if (res.ok) disHistCache.set(year, await res.json());
+          else if (res.status === 404) disHistCache.set(year, { events: [] });
+          else return;
+        }
+        const { events } = disHistCache.get(year)!;
+        if (!alive || !mapRef.current) return;
+        const geojson = {
+          type: "FeatureCollection" as const,
+          features: events.map((ev) => ({
+            type: "Feature" as const,
+            properties: ev,
+            geometry: { type: "Point" as const, coordinates: [ev.lon, ev.lat] },
+          })),
+        };
+        const src = map.getSource("dishist") as maplibregl.GeoJSONSource | undefined;
+        if (src) {
+          src.setData(geojson);
+        } else {
+          map.addSource("dishist", {
+            type: "geojson",
+            data: geojson,
+            attribution: 'Alert archive: <a href="https://www.gdacs.org">GDACS</a>',
+          });
+          map.addLayer({
+            id: "dishist",
+            type: "circle",
+            source: "dishist",
+            paint: {
+              "circle-radius": [
+                "match", ["get", "level"],
+                "Red", 8, "Orange", 5.5, 3.5,
+              ],
+              "circle-color": [
+                "match", ["get", "type"],
+                "TC", "#9085e9",
+                "FL", "#3987e5",
+                "DR", "#e0a355",
+                "VO", "#e34948",
+                "WF", "#ee6a30",
+                "#a6a6a6",
+              ],
+              "circle-opacity": 0.8,
+              "circle-stroke-color": [
+                "match", ["get", "level"],
+                "Red", "#ffffff", "#0d0d0d",
+              ],
+              "circle-stroke-width": [
+                "match", ["get", "level"],
+                "Red", 1.5, 0.5,
+              ],
+            },
+          });
+        }
+      } catch {
+        /* year file missing */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [disHistOn, year, mapReady]);
 
   // Air quality layer (OpenAQ latest PM2.5 via our aggregating proxy)
   useEffect(() => {
@@ -855,11 +1017,18 @@ export function MapExplorer({
       fetchChoropleth(metric.id, y);
       if (stormsOn && !stormsCache.has(y))
         fetch(`/data/storms/${y}.json`)
-          .then((r) => (r.ok ? r.json() : { storms: [] }))
-          .then((j) => stormsCache.set(y, j))
+          .then((r) => (r.ok ? r.json().then((j) => stormsCache.set(y, j)) : undefined))
+          .catch(() => {});
+      if (quakeHistOn && !quakeHistCache.has(y))
+        fetch(`/data/quakes-history/${y}.json`)
+          .then((r) => (r.ok ? r.json().then((j) => quakeHistCache.set(y, j)) : undefined))
+          .catch(() => {});
+      if (disHistOn && !disHistCache.has(y))
+        fetch(`/data/disasters-history/${y}.json`)
+          .then((r) => (r.ok ? r.json().then((j) => disHistCache.set(y, j)) : undefined))
           .catch(() => {});
     }
-  }, [metric, year, stormsOn]);
+  }, [metric, year, stormsOn, quakeHistOn, disHistOn]);
 
   const domains = [...new Set(metrics.map((m) => m.domain))];
   const sliderMin = metric.firstYear;
@@ -867,7 +1036,7 @@ export function MapExplorer({
 
   const legendColours = rampColours(metric.scaleType, metric.ramp);
   const accent = accentFor(metric.scaleType, metric.ramp);
-  const liveCount = [satOn, firesOn, floodsOn, airOn, quakesOn, disastersOn, stormsOn].filter(Boolean).length;
+  const liveCount = [satOn, firesOn, floodsOn, airOn, quakesOn, disastersOn, stormsOn, quakeHistOn, disHistOn].filter(Boolean).length;
   const legendEl = (
     <div>
       <div className="mb-1 truncate text-sm font-medium text-white">
@@ -931,6 +1100,9 @@ export function MapExplorer({
           defaultOpen={false}
         >
           <div className="space-y-0.5">
+            <div className="pt-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
+              Live now
+            </div>
             <LayerRow label="Satellite imagery" checked={satOn} onChange={setSatOn} />
             {satOn && (
               <input
@@ -971,20 +1143,6 @@ export function MapExplorer({
                 ]}
               />
             )}
-            <LayerRow label={`Storm tracks · ${year}`} dot="#f0502a" checked={stormsOn} onChange={setStormsOn} />
-            {stormsOn && (
-              <>
-                <LegendRow
-                  items={STORM_CATS.labels.map((l, i) => ({
-                    label: l,
-                    colour: STORM_CATS.colours[i],
-                  }))}
-                />
-                <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
-                  Every tropical cyclone since 1842. Press play to replay the seasons.
-                </p>
-              </>
-            )}
             <LayerRow label="Disaster alerts" dot="#9085e9" checked={disastersOn} onChange={setDisastersOn} />
             {disastersOn && (
               <LegendRow
@@ -995,6 +1153,82 @@ export function MapExplorer({
                   { label: "volcano", colour: "#e34948" },
                 ]}
               />
+            )}
+            <div className="mt-2 border-t border-white/10 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
+              History · follows the year slider
+            </div>
+            <LayerRow label={`Storm tracks · ${year}`} dot="#f0502a" checked={stormsOn} onChange={setStormsOn} />
+            {stormsOn && (
+              <>
+                <div className="flex flex-wrap gap-1 pb-1 pl-4">
+                  {STORM_CATS.labels.map((l, i) => {
+                    const active = stormCats.includes(i);
+                    return (
+                      <button
+                        key={l}
+                        onClick={() =>
+                          setStormCats((cats) =>
+                            cats.includes(i)
+                              ? cats.filter((c) => c !== i)
+                              : [...cats, i]
+                          )
+                        }
+                        aria-pressed={active}
+                        className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] transition-colors ${
+                          active
+                            ? "border-white/20 bg-white/10 text-[#c3c2b7]"
+                            : "border-white/5 text-[#52514e]"
+                        }`}
+                      >
+                        <span
+                          className="inline-block h-2 w-2 rounded-full"
+                          style={{
+                            background: STORM_CATS.colours[i],
+                            opacity: active ? 1 : 0.3,
+                          }}
+                        />
+                        {l}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+                  Every tropical cyclone since 1842. Tap a category to hide it;
+                  press play to replay the seasons.
+                </p>
+              </>
+            )}
+            <LayerRow label={`Earthquakes M6+ · ${year}`} dot="#f0502a" checked={quakeHistOn} onChange={setQuakeHistOn} />
+            {quakeHistOn && (
+              <>
+                <LegendRow
+                  items={[
+                    { label: "M6-7", colour: "#fb9a3c" },
+                    { label: "M7-8", colour: "#f0502a" },
+                    { label: "M8+", colour: "#e01515" },
+                  ]}
+                />
+                <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+                  USGS archive, 1900 onwards.
+                </p>
+              </>
+            )}
+            <LayerRow label={`Disasters · ${year}`} dot="#3987e5" checked={disHistOn} onChange={setDisHistOn} />
+            {disHistOn && (
+              <>
+                <LegendRow
+                  items={[
+                    { label: "cyclone", colour: "#9085e9" },
+                    { label: "flood", colour: "#3987e5" },
+                    { label: "drought", colour: "#e0a355" },
+                    { label: "wildfire", colour: "#ee6a30" },
+                    { label: "volcano", colour: "#e34948" },
+                  ]}
+                />
+                <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+                  GDACS archive, 2000 onwards (wildfires from 2022).
+                </p>
+              </>
             )}
           </div>
         </Panel>

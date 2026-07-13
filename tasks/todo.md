@@ -85,6 +85,13 @@ Full plan: [PLAN.md](../PLAN.md).
 - [x] UI tidy: collapsible Panel component; metric picker collapses to
       active metric + legend; live layers panel redesigned with dot rows,
       inline legends and an "N on" badge
+- [x] Antimeridian fix: storm tracks unwrap longitudes (no more global bands)
+- [x] Storm category filter chips (tap to hide TD/TS/Cat1-5)
+- [x] Earthquake history layer: USGS archive, 14,494 M6+ quakes/year files
+      (1900-2026, 2.7MB), click popups with dates
+- [x] Disaster history layer: GDACS archive, 1,027 events (2000-2026, 272KB;
+      floods throughout, wildfires only from ~2022), click popups
+- [x] Layers panel split into "Live now" / "History · follows the year slider"
 - [ ] DEPLOY: awaiting Tim's express permission
 
 ## Review

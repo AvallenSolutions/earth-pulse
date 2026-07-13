@@ -62,8 +62,15 @@ const LEVEL_COLOURS: Record<string, string> = {
 function timeAgo(ms: number): string {
   const mins = Math.round((Date.now() - ms) / 60000);
   if (mins < 60) return `${mins} min ago`;
-  const hours = Math.floor(mins / 60);
-  return `${hours}h ${mins % 60}m ago`;
+  if (mins < 72 * 60) {
+    const hours = Math.floor(mins / 60);
+    return `${hours}h ${mins % 60}m ago`;
+  }
+  return new Date(ms).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function newsUrl(query: string): string {

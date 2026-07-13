@@ -34,3 +34,11 @@ Corrections and patterns to remember for this project. Reviewed at session start
   chain `vercel deploy` / alias changes onto build or commit commands. Local
   builds and git commits are fine; anything public-facing needs a fresh,
   explicit yes each time.
+- **Restart the dev server after bulk python edits to big components.** Fast
+  Refresh served a stale MapExplorer twice (toggles set state but effects
+  never ran). preview_stop + preview_start guarantees a fresh compile.
+- **queryRenderedFeatures/querySourceFeatures return 0 in a backgrounded
+  Browser pane** (tile loading is rAF-throttled). The screenshot after a
+  repaint is the reliable verification, not the query APIs.
+- **Track lines crossing the antimeridian must use unwrapped longitudes**
+  (continue past ±180), or MapLibre draws a straight band around the planet.
