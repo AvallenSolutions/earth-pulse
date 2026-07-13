@@ -9,12 +9,24 @@ import type { Vitals } from "@/lib/vitals";
 import { Sparkline } from "./Sparkline";
 import { CountrySearch } from "./CountrySearch";
 import { VitalsStrip } from "./VitalsStrip";
+import { Panel } from "./Panel";
 import { EventPopup, type MapEvent } from "./EventPopup";
 
 /** Latest full GIBS imagery day (UTC yesterday). */
 function latestImageryDate(): string {
   return new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
 }
+
+/** Storm track colours by category: 0 TD/unknown, 1 TS, 2-6 = Cat 1-5 */
+const STORM_CATS = {
+  colours: ["#7d8a97", "#4eb3d3", "#fed976", "#fb9a3c", "#f0502a", "#e01515", "#c9184a"],
+  labels: ["TD", "TS", "Cat 1", "Cat 2", "Cat 3", "Cat 4", "Cat 5"],
+};
+
+const stormsCache = new Map<number, StormYear>();
+type StormYear = {
+  storms: { id: string; name: string; cat: number; maxWind: number; points: [number, number, number][] }[];
+};
 
 const AIR_BREAKS = {
   colours: ["#0ca30c", "#fab219", "#ec835a", "#d03b3b"],
@@ -93,6 +105,11 @@ export function MapExplorer({
   const [airOn, setAirOn] = useState(false);
   const [quakesOn, setQuakesOn] = useState(false);
   const [disastersOn, setDisastersOn] = useState(false);
+  const [stormsOn, setStormsOn] = useState(false);
+  const [ticker, setTicker] = useState<
+    { lon: number; lat: number; label: string; event: MapEvent }[]
+  >([]);
+  const [tickerI, setTickerI] = useState(0);
   const [airStatus, setAirStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   // Init map once
@@ -276,7 +293,18 @@ export function MapExplorer({
         eventid: Number(p.eventid),
       });
     });
-    for (const layer of ["quakes", "disasters"]) {
+    map.on("click", "storms", (e) => {
+      const p = e.features?.[0]?.properties;
+      if (!p) return;
+      popupAt(e, {
+        kind: "storm",
+        name: String(p.name),
+        cat: Number(p.cat),
+        maxWind: Number(p.maxWind),
+        year: Number(p.year),
+      });
+    });
+    for (const layer of ["quakes", "disasters", "storms"]) {
       map.on("mouseenter", layer, () => {
         map.getCanvas().style.cursor = "pointer";
       });
@@ -285,7 +313,7 @@ export function MapExplorer({
       // event dots sit above countries; don't navigate through them
       const hits = map
         .queryRenderedFeatures(e.point, {
-          layers: ["quakes", "disasters"].filter((l) => map.getLayer(l)),
+          layers: ["quakes", "disasters", "storms"].filter((l) => map.getLayer(l)),
         })
         .length;
       if (hits > 0) return;
@@ -564,6 +592,84 @@ export function MapExplorer({
     };
   }, [disastersOn, mapReady]);
 
+  // Historical storm tracks (IBTrACS): follows the year slider, so playing
+  // the timeline replays each season's cyclones. The 4D layer.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    let alive = true;
+    if (!stormsOn) {
+      if (map.getLayer("storms")) map.removeLayer("storms");
+      if (map.getSource("storms")) map.removeSource("storms");
+      return;
+    }
+    (async () => {
+      try {
+        if (!stormsCache.has(year)) {
+          const res = await fetch(`/data/storms/${year}.json`);
+          stormsCache.set(year, res.ok ? await res.json() : { storms: [] });
+        }
+        const { storms } = stormsCache.get(year)!;
+        if (!alive || !mapRef.current) return;
+        const geojson = {
+          type: "FeatureCollection" as const,
+          features: storms.map((st) => ({
+            type: "Feature" as const,
+            properties: {
+              name: st.name,
+              cat: st.cat,
+              maxWind: st.maxWind,
+              year,
+            },
+            geometry: {
+              type: "LineString" as const,
+              coordinates: st.points.map(([lon, lat]) => [lon, lat]),
+            },
+          })),
+        };
+        const src = map.getSource("storms") as maplibregl.GeoJSONSource | undefined;
+        if (src) {
+          src.setData(geojson);
+        } else {
+          map.addSource("storms", {
+            type: "geojson",
+            data: geojson,
+            attribution: 'Storms: <a href="https://www.ncei.noaa.gov/products/international-best-track-archive">NOAA IBTrACS</a>',
+          });
+          map.addLayer({
+            id: "storms",
+            type: "line",
+            source: "storms",
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: {
+              "line-color": [
+                "match", ["get", "cat"],
+                0, STORM_CATS.colours[0],
+                1, STORM_CATS.colours[1],
+                2, STORM_CATS.colours[2],
+                3, STORM_CATS.colours[3],
+                4, STORM_CATS.colours[4],
+                5, STORM_CATS.colours[5],
+                6, STORM_CATS.colours[6],
+                STORM_CATS.colours[0],
+              ],
+              "line-width": [
+                "interpolate", ["linear"], ["get", "cat"],
+                0, 1, 6, 2.5,
+              ],
+              "line-opacity": 0.8,
+            },
+          });
+        }
+      } catch {
+        /* season file missing; nothing to draw */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [stormsOn, year, mapReady]);
+
   // Air quality layer (OpenAQ latest PM2.5 via our aggregating proxy)
   useEffect(() => {
     const map = mapRef.current;
@@ -621,6 +727,113 @@ export function MapExplorer({
     };
   }, [airOn, mapReady]);
 
+  // Live event ticker: the biggest things happening on Earth right now
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [qres, dres] = await Promise.all([
+          fetch("/api/quakes"),
+          fetch("/api/disasters"),
+        ]);
+        if (!qres.ok || !dres.ok) return;
+        const { quakes } = (await qres.json()) as {
+          quakes: { lon: number; lat: number; mag: number; depth: number; place: string; time: number; url: string }[];
+        };
+        const { events } = (await dres.json()) as {
+          events: { lon: number; lat: number; type: string; level: string; name: string; country: string; severity: string; from: string; to: string; eventid: number }[];
+        };
+        if (!alive) return;
+        const items: { sev: number; lon: number; lat: number; label: string; event: MapEvent }[] = [];
+        for (const q of quakes.filter((x) => x.mag >= 4.8)) {
+          items.push({
+            sev: q.mag >= 6 ? 2.5 : 1,
+            lon: q.lon,
+            lat: q.lat,
+            label: `M${q.mag.toFixed(1)} earthquake · ${q.place}`,
+            event: { kind: "quake", mag: q.mag, depth: q.depth, place: q.place, time: q.time, url: q.url },
+          });
+        }
+        const typeNames: Record<string, string> = {
+          TC: "cyclone", FL: "flood", DR: "drought", VO: "volcano", WF: "wildfire", EQ: "earthquake",
+        };
+        const seen = new Set<number>();
+        for (const ev of events.filter((x) => x.level === "Red" || x.level === "Orange")) {
+          if (seen.has(ev.eventid)) continue;
+          seen.add(ev.eventid);
+          items.push({
+            sev: ev.level === "Red" ? 3 : 1.5,
+            lon: ev.lon,
+            lat: ev.lat,
+            label: `${ev.level.toUpperCase()} ${typeNames[ev.type] ?? "alert"} · ${ev.name}`,
+            event: {
+              kind: "disaster", type: ev.type, level: ev.level, name: ev.name,
+              country: ev.country, severity: ev.severity, from: ev.from, to: ev.to, eventid: ev.eventid,
+            },
+          });
+        }
+        items.sort((a, b) => b.sev - a.sev);
+        setTicker(items.slice(0, 14));
+      } catch {
+        /* ticker simply stays hidden */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (ticker.length < 2) return;
+    const t = setInterval(() => setTickerI((i) => (i + 1) % ticker.length), 6000);
+    return () => clearInterval(t);
+  }, [ticker]);
+
+  const showTickerEvent = useCallback((item: { lon: number; lat: number; event: MapEvent }) => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (item.event.kind === "quake") setQuakesOn(true);
+    if (item.event.kind === "disaster") setDisastersOn(true);
+    map.flyTo({ center: [item.lon, item.lat], zoom: 4.2, duration: 1800 });
+    map.once("moveend", () => {
+      const pt = map.project([item.lon, item.lat]);
+      const w = map.getCanvas().clientWidth;
+      const h = map.getCanvas().clientHeight;
+      setPopup({
+        event: item.event,
+        left: Math.min(pt.x + 12, w - 300),
+        top: Math.min(Math.max(pt.y - 10, 8), h - 260),
+      });
+    });
+  }, []);
+
+  // Cinematic idle spin: after 12s without input, the globe drifts slowly
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !globeOn || playing || popup) return;
+    let idleSince = Date.now();
+    const bump = () => {
+      idleSince = Date.now();
+    };
+    const canvas = map.getCanvas();
+    for (const ev of ["mousedown", "wheel", "touchstart", "mousemove", "keydown"])
+      canvas.addEventListener(ev, bump, { passive: true });
+    let raf = 0;
+    const tick = () => {
+      if (Date.now() - idleSince > 12000 && document.visibilityState === "visible") {
+        const c = map.getCenter();
+        map.setCenter([c.lng + 0.012, c.lat]);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      for (const ev of ["mousedown", "wheel", "touchstart", "mousemove", "keydown"])
+        canvas.removeEventListener(ev, bump);
+    };
+  }, [mapReady, globeOn, playing, popup]);
+
   // Play/animate the timeline
   useEffect(() => {
     if (!playing) return;
@@ -638,9 +851,15 @@ export function MapExplorer({
 
   // Prefetch nearby years so scrubbing is smooth
   useEffect(() => {
-    for (let y = year + 1; y <= Math.min(year + 5, metric.lastYear); y++)
+    for (let y = year + 1; y <= Math.min(year + 5, metric.lastYear); y++) {
       fetchChoropleth(metric.id, y);
-  }, [metric, year]);
+      if (stormsOn && !stormsCache.has(y))
+        fetch(`/data/storms/${y}.json`)
+          .then((r) => (r.ok ? r.json() : { storms: [] }))
+          .then((j) => stormsCache.set(y, j))
+          .catch(() => {});
+    }
+  }, [metric, year, stormsOn]);
 
   const domains = [...new Set(metrics.map((m) => m.domain))];
   const sliderMin = metric.firstYear;
@@ -648,6 +867,25 @@ export function MapExplorer({
 
   const legendColours = rampColours(metric.scaleType, metric.ramp);
   const accent = accentFor(metric.scaleType, metric.ramp);
+  const liveCount = [satOn, firesOn, floodsOn, airOn, quakesOn, disastersOn, stormsOn].filter(Boolean).length;
+  const legendEl = (
+    <div>
+      <div className="mb-1 truncate text-sm font-medium text-white">
+        {metric.name}
+      </div>
+      <div
+        className="h-2 rounded-full"
+        style={{
+          background: `linear-gradient(to right, ${legendColours.join(", ")})`,
+        }}
+      />
+      <div className="mt-0.5 flex justify-between text-[10px] tabular-nums text-[#898781]">
+        <span>{metric.scale[0]}</span>
+        <span>{metric.unit}</span>
+        <span>{metric.scale[1]}+</span>
+      </div>
+    </div>
+  );
 
   const onSelectCountry = useCallback((c: Country) => {
     window.location.href = `/country/${c.iso3}`;
@@ -686,174 +924,152 @@ export function MapExplorer({
       </div>
 
       {/* Live layers */}
-      <div className="absolute right-4 top-16 z-10 w-64 rounded-xl border border-white/10 bg-[#1a1a19]/90 p-3 backdrop-blur">
-        <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-[#898781]">
-          Live layers
-        </div>
-        <label className="flex cursor-pointer items-center justify-between py-1 text-sm text-[#c3c2b7]">
-          <span>Satellite imagery</span>
-          <input
-            type="checkbox"
-            checked={satOn}
-            onChange={(e) => setSatOn(e.target.checked)}
-            className="h-4 w-4 accent-white"
-          />
-        </label>
-        {satOn && (
-          <input
-            type="date"
-            value={satDate}
-            min="2012-01-20"
-            max={latestImageryDate()}
-            onChange={(e) => e.target.value && setSatDate(e.target.value)}
-            aria-label="Imagery date"
-            className="mb-1 w-full rounded-md border border-white/10 bg-black/30 px-2 py-1 text-xs text-white [color-scheme:dark]"
-          />
-        )}
-        <label className="flex cursor-pointer items-center justify-between py-1 text-sm text-[#c3c2b7]">
-          <span>Active fires (24h)</span>
-          <input
-            type="checkbox"
-            checked={firesOn}
-            onChange={(e) => setFiresOn(e.target.checked)}
-            className="h-4 w-4 accent-white"
-          />
-        </label>
-        <label className="flex cursor-pointer items-center justify-between py-1 text-sm text-[#c3c2b7]">
-          <span>River flood alerts (15 days)</span>
-          <input
-            type="checkbox"
-            checked={floodsOn}
-            onChange={(e) => setFloodsOn(e.target.checked)}
-            className="h-4 w-4 accent-white"
-          />
-        </label>
-        <label className="flex cursor-pointer items-center justify-between py-1 text-sm text-[#c3c2b7]">
-          <span>Air quality now</span>
-          <input
-            type="checkbox"
-            checked={airOn}
-            onChange={(e) => setAirOn(e.target.checked)}
-            className="h-4 w-4 accent-white"
-          />
-        </label>
-        {airOn && airStatus === "loading" && (
-          <p className="text-[10px] text-[#898781]">Loading stations…</p>
-        )}
-        {airOn && airStatus === "error" && (
-          <p className="text-[10px] text-[#898781]">
-            Air quality feed unavailable right now.
-          </p>
-        )}
-        <label className="flex cursor-pointer items-center justify-between py-1 text-sm text-[#c3c2b7]">
-          <span>Earthquakes (24h)</span>
-          <input
-            type="checkbox"
-            checked={quakesOn}
-            onChange={(e) => setQuakesOn(e.target.checked)}
-            className="h-4 w-4 accent-white"
-          />
-        </label>
-        {quakesOn && (
-          <div className="mb-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-[#898781]">
-            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#fed976" }} />M1-3</span>
-            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#fb9a3c" }} />M3-4.5</span>
-            <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#f0502a" }} />M4.5-6</span>
-            <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-full" style={{ background: "#e01515" }} />M6+</span>
-          </div>
-        )}
-        <label className="flex cursor-pointer items-center justify-between py-1 text-sm text-[#c3c2b7]">
-          <span>Disaster alerts</span>
-          <input
-            type="checkbox"
-            checked={disastersOn}
-            onChange={(e) => setDisastersOn(e.target.checked)}
-            className="h-4 w-4 accent-white"
-          />
-        </label>
-        {disastersOn && (
-          <div className="mb-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-[#898781]">
-            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#9085e9" }} />cyclone</span>
-            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#3987e5" }} />flood</span>
-            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#e0a355" }} />drought</span>
-            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#e34948" }} />volcano</span>
-            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full ring-1 ring-white" style={{ background: "#0d0d0d" }} />red alert</span>
-          </div>
-        )}
-        {airOn && airStatus === "ready" && (
-          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-[#898781]">
-            {AIR_BREAKS.labels.map((l, i) => (
-              <span key={l} className="flex items-center gap-1">
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={{ background: AIR_BREAKS.colours[i] }}
+      <div className="absolute right-4 top-16 z-10 w-64">
+        <Panel
+          title="Live layers"
+          badge={liveCount ? `${liveCount} on` : undefined}
+          defaultOpen={false}
+        >
+          <div className="space-y-0.5">
+            <LayerRow label="Satellite imagery" checked={satOn} onChange={setSatOn} />
+            {satOn && (
+              <input
+                type="date"
+                value={satDate}
+                min="2012-01-20"
+                max={latestImageryDate()}
+                onChange={(e) => e.target.value && setSatDate(e.target.value)}
+                aria-label="Imagery date"
+                className="mb-1 w-full rounded-md border border-white/10 bg-black/30 px-2 py-1 text-xs text-white [color-scheme:dark]"
+              />
+            )}
+            <LayerRow label="Active fires (24h)" dot="#f0502a" checked={firesOn} onChange={setFiresOn} />
+            <LayerRow label="River flood alerts" dot="#3987e5" checked={floodsOn} onChange={setFloodsOn} />
+            <LayerRow label="Air quality now" dot="#0ca30c" checked={airOn} onChange={setAirOn} />
+            {airOn && airStatus === "loading" && (
+              <p className="pl-4 text-[10px] text-[#898781]">Loading stations…</p>
+            )}
+            {airOn && airStatus === "error" && (
+              <p className="pl-4 text-[10px] text-[#898781]">Feed unavailable right now.</p>
+            )}
+            {airOn && airStatus === "ready" && (
+              <LegendRow
+                items={AIR_BREAKS.labels.map((l, i) => ({
+                  label: `${l} µg/m³`,
+                  colour: AIR_BREAKS.colours[i],
+                }))}
+              />
+            )}
+            <LayerRow label="Earthquakes (24h)" dot="#fb9a3c" checked={quakesOn} onChange={setQuakesOn} />
+            {quakesOn && (
+              <LegendRow
+                items={[
+                  { label: "M1-3", colour: "#fed976" },
+                  { label: "M3-4.5", colour: "#fb9a3c" },
+                  { label: "M4.5-6", colour: "#f0502a" },
+                  { label: "M6+", colour: "#e01515" },
+                ]}
+              />
+            )}
+            <LayerRow label={`Storm tracks · ${year}`} dot="#f0502a" checked={stormsOn} onChange={setStormsOn} />
+            {stormsOn && (
+              <>
+                <LegendRow
+                  items={STORM_CATS.labels.map((l, i) => ({
+                    label: l,
+                    colour: STORM_CATS.colours[i],
+                  }))}
                 />
-                {l} µg/m³
-              </span>
-            ))}
+                <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+                  Every tropical cyclone since 1842. Press play to replay the seasons.
+                </p>
+              </>
+            )}
+            <LayerRow label="Disaster alerts" dot="#9085e9" checked={disastersOn} onChange={setDisastersOn} />
+            {disastersOn && (
+              <LegendRow
+                items={[
+                  { label: "cyclone", colour: "#9085e9" },
+                  { label: "flood", colour: "#3987e5" },
+                  { label: "drought", colour: "#e0a355" },
+                  { label: "volcano", colour: "#e34948" },
+                ]}
+              />
+            )}
           </div>
-        )}
+        </Panel>
       </div>
 
       {/* Metric picker */}
-      <div className="absolute left-4 top-28 z-10 max-h-[calc(100dvh-220px)] max-w-xs overflow-y-auto rounded-xl border border-white/10 bg-[#1a1a19]/90 p-3 backdrop-blur">
-        {domains.map((d) => (
-          <div key={d} className="mb-2 last:mb-0">
-            <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-[#898781]">
-              {DOMAIN_LABELS[d] ?? d}
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {metrics
-                .filter((m) => m.domain === d)
-                .map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => {
-                      setMetricId(m.id);
-                      setYear((y) =>
-                        Math.min(Math.max(y, m.firstYear), m.lastYear)
-                      );
-                    }}
-                    className={`rounded-full px-2.5 py-1 text-xs transition-colors ${
-                      m.id === metricId
-                        ? "bg-white text-black"
-                        : "bg-white/10 text-[#c3c2b7] hover:bg-white/20"
-                    }`}
-                  >
-                    {m.name}
-                  </button>
-                ))}
-            </div>
+      <div className="absolute left-4 top-28 z-10 w-[21rem] max-w-[85vw]">
+        <Panel title="Map data" defaultOpen={false} summary={legendEl}>
+          <div className="max-h-[calc(100dvh-360px)] overflow-y-auto pr-1">
+            {domains.map((d) => (
+              <div key={d} className="mb-2 last:mb-0">
+                <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-[#898781]">
+                  {DOMAIN_LABELS[d] ?? d}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {metrics
+                    .filter((m) => m.domain === d)
+                    .map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => {
+                          setMetricId(m.id);
+                          setYear((y) =>
+                            Math.min(Math.max(y, m.firstYear), m.lastYear)
+                          );
+                        }}
+                        className={`rounded-full px-2.5 py-1 text-xs transition-colors ${
+                          m.id === metricId
+                            ? "bg-white text-black"
+                            : "bg-white/10 text-[#c3c2b7] hover:bg-white/20"
+                        }`}
+                      >
+                        {m.name}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-        <p className="mt-2 border-t border-white/10 pt-2 text-xs leading-snug text-[#c3c2b7]">
-          {metric.explainer}{" "}
-          <a
-            href={metric.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-[#6da7ec] hover:underline"
-          >
-            Source: {metric.source}
-          </a>
-        </p>
-        {/* Legend */}
-        <div className="mt-2">
-          <div
-            className="h-2 rounded-full"
-            style={{
-              background: `linear-gradient(to right, ${legendColours.join(", ")})`,
-            }}
-          />
-          <div className="mt-0.5 flex justify-between text-[10px] tabular-nums text-[#898781]">
-            <span>
-              {metric.scale[0]}
-            </span>
-            <span>{metric.unit}</span>
-            <span>{metric.scale[1]}+</span>
-          </div>
-        </div>
+          <p className="mt-2 border-t border-white/10 pt-2 text-xs leading-snug text-[#c3c2b7]">
+            {metric.explainer}{" "}
+            <a
+              href={metric.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[#6da7ec] hover:underline"
+            >
+              Source: {metric.source}
+            </a>
+          </p>
+          <div className="mt-2">{legendEl}</div>
+        </Panel>
       </div>
+
+      {/* Live event ticker */}
+      {ticker.length > 0 && (
+        <button
+          onClick={() => showTickerEvent(ticker[tickerI])}
+          className="absolute bottom-[5.75rem] left-1/2 z-10 flex max-w-[min(600px,86vw)] -translate-x-1/2 items-center gap-2.5 rounded-full border border-white/10 bg-[#161615]/95 py-2 pl-3 pr-4 text-left backdrop-blur transition-colors hover:border-white/25"
+        >
+          <span className="relative flex h-2 w-2 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#e34948] opacity-60" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#e34948]" />
+          </span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#e34948]">
+            Live
+          </span>
+          <span className="truncate text-xs text-[#c3c2b7]">
+            {ticker[tickerI].label}
+          </span>
+          <span className="shrink-0 text-[10px] tabular-nums text-[#898781]">
+            {tickerI + 1}/{ticker.length}
+          </span>
+        </button>
+      )}
 
       {/* Globe / flat toggle */}
       <button
@@ -967,6 +1183,54 @@ export function MapExplorer({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function LayerRow({
+  label,
+  dot,
+  checked,
+  onChange,
+}: {
+  label: string;
+  dot?: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="-mx-1.5 flex cursor-pointer items-center justify-between rounded-lg px-1.5 py-1.5 text-sm text-[#c3c2b7] transition-colors hover:bg-white/5">
+      <span className="flex items-center gap-2">
+        {dot && (
+          <span
+            className="inline-block h-2 w-2 rounded-full"
+            style={{ background: dot, opacity: checked ? 1 : 0.35 }}
+          />
+        )}
+        {label}
+      </span>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 accent-white"
+      />
+    </label>
+  );
+}
+
+function LegendRow({ items }: { items: { label: string; colour: string }[] }) {
+  return (
+    <div className="flex flex-wrap gap-x-2.5 gap-y-0.5 pb-1 pl-4 text-[10px] text-[#898781]">
+      {items.map((it) => (
+        <span key={it.label} className="flex items-center gap-1">
+          <span
+            className="inline-block h-2 w-2 rounded-full"
+            style={{ background: it.colour }}
+          />
+          {it.label}
+        </span>
+      ))}
     </div>
   );
 }

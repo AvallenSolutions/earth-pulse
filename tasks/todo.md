@@ -76,6 +76,17 @@ Full plan: [PLAN.md](../PLAN.md).
 - [ ] Ingest freshness monitoring / weekly cron
 - [ ] Custom domain if wanted (earth-pulse.vercel.app is another account's)
 
+## Phase 6 — God's Eye (13 Jul 2026, built, NOT yet deployed)
+- [x] IBTrACS storm tracks: 12,989 cyclones, 178 seasons (1842-2025), 6.2MB
+      static per-year files; layer follows the year slider = 4D replay
+- [x] Storm click popups (category, peak winds, Wikipedia/news links)
+- [x] Live event ticker (Red/Orange alerts + M4.8+ quakes), click to fly
+- [x] Idle globe rotation after 12s without input
+- [x] UI tidy: collapsible Panel component; metric picker collapses to
+      active metric + legend; live layers panel redesigned with dot rows,
+      inline legends and an "N on" badge
+- [ ] DEPLOY: awaiting Tim's express permission
+
 ## Review
 - Phases 0-5 built and launched 13 Jul 2026. Decisions along the way:
   - No basemap tiles: flat Natural Earth boundaries on a dark surface. Zero

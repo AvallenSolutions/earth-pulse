@@ -16,6 +16,13 @@ export type MapEvent =
       url: string;
     }
   | {
+      kind: "storm";
+      name: string;
+      cat: number;
+      maxWind: number;
+      year: number;
+    }
+  | {
       kind: "disaster";
       type: string;
       level: string;
@@ -26,6 +33,16 @@ export type MapEvent =
       to: string;
       eventid: number;
     };
+
+const CAT_LABELS = [
+  "Tropical depression",
+  "Tropical storm",
+  "Category 1 hurricane",
+  "Category 2 hurricane",
+  "Category 3 hurricane",
+  "Category 4 hurricane",
+  "Category 5 hurricane",
+];
 
 const TYPE_LABELS: Record<string, string> = {
   TC: "Tropical cyclone",
@@ -77,7 +94,44 @@ export function EventPopup({
         ✕
       </button>
 
-      {event.kind === "quake" ? (
+      {event.kind === "storm" ? (
+        <>
+          <div className="pr-6 text-sm font-semibold text-white">
+            {event.name} · {event.year}
+          </div>
+          <div className="mt-0.5 text-xs text-[#c3c2b7]">
+            {CAT_LABELS[event.cat] ?? "Storm"}
+          </div>
+          <dl className="mt-2 space-y-1 text-xs text-[#898781]">
+            <div className="flex justify-between">
+              <dt>Peak winds</dt>
+              <dd className="tabular-nums text-[#c3c2b7]">
+                {event.maxWind > 0
+                  ? `${event.maxWind} kt (${Math.round(event.maxWind * 1.852)} km/h)`
+                  : "not recorded"}
+              </dd>
+            </div>
+          </dl>
+          <div className="mt-3 flex flex-col gap-1.5 border-t border-white/10 pt-2.5 text-xs">
+            <a
+              href={`https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(`${event.name} ${event.year} cyclone hurricane typhoon`)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[#6da7ec] hover:underline"
+            >
+              Wikipedia →
+            </a>
+            <a
+              href={newsUrl(`${event.name} hurricane cyclone ${event.year}`)}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[#6da7ec] hover:underline"
+            >
+              News coverage →
+            </a>
+          </div>
+        </>
+      ) : event.kind === "quake" ? (
         <>
           <div className="pr-6 text-sm font-semibold text-white">
             M{event.mag.toFixed(1)} earthquake
