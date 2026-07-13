@@ -4,8 +4,8 @@ import { MapExplorer } from "@/components/MapExplorer";
 import { getVitals } from "@/lib/vitals";
 import type { Country, Metric } from "@/lib/types";
 
-// Refresh the vitals strip every 6 hours
-export const revalidate = 21600;
+// Refresh the vitals strip every 3 hours (CO2 and sea ice update daily)
+export const revalidate = 10800;
 
 export default async function Home({
   searchParams,

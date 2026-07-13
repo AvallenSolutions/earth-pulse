@@ -1125,6 +1125,9 @@ export function MapExplorer({
             Compare countries →
           </a>
         </div>
+        <div className="mt-2 xl:hidden">
+          <VitalsStrip vitals={vitals} variant="inline" />
+        </div>
       </div>
 
       {/* Planet vitals */}
@@ -1278,7 +1281,7 @@ export function MapExplorer({
       </div>
 
       {/* Metric picker */}
-      <div className="absolute left-4 top-28 z-10 w-[21rem] max-w-[85vw]">
+      <div className="absolute left-4 top-52 z-10 w-[21rem] max-w-[85vw] xl:top-28">
         <Panel title="Map data" defaultOpen={false} summary={legendEl}>
           <div className="max-h-[calc(100dvh-360px)] overflow-y-auto pr-1">
             {domains.map((d) => (

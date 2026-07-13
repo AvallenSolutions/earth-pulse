@@ -6,7 +6,14 @@ import type { Vitals } from "@/lib/vitals";
  * The planet's heartbeat numbers, top centre of the map. Values arrive
  * server-rendered (ISR, 6h); any feed that failed is simply not shown.
  */
-export function VitalsStrip({ vitals }: { vitals: Vitals }) {
+export function VitalsStrip({
+  vitals,
+  variant = "floating",
+}: {
+  vitals: Vitals;
+  /** floating = centred pill on wide screens; inline = compact row in flow */
+  variant?: "floating" | "inline";
+}) {
   const items: {
     label: string;
     value: string;
@@ -45,15 +52,30 @@ export function VitalsStrip({ vitals }: { vitals: Vitals }) {
   }
   if (items.length === 0) return null;
 
+  const compact = variant === "inline";
   return (
-    <div className="pointer-events-none absolute left-1/2 top-4 z-10 hidden -translate-x-1/2 lg:block">
-      <div className="flex divide-x divide-white/10 rounded-xl border border-white/10 bg-[#1a1a19]/90 backdrop-blur">
+    <div
+      className={
+        compact
+          ? "pointer-events-none"
+          : "pointer-events-none absolute left-1/2 top-4 z-10 hidden -translate-x-1/2 xl:block"
+      }
+    >
+      <div
+        className={`flex divide-x divide-white/10 rounded-xl border border-white/10 bg-[#1a1a19]/90 backdrop-blur ${
+          compact ? "w-fit max-w-[calc(100vw-2rem)] overflow-x-auto" : ""
+        }`}
+      >
         {items.map((it) => (
-          <div key={it.label} className="px-4 py-2">
+          <div key={it.label} className={compact ? "shrink-0 px-3 py-1.5" : "px-4 py-2"}>
             <div className="text-[10px] font-medium uppercase tracking-wide text-[#898781]">
               {it.label}
             </div>
-            <div className="flex items-baseline gap-1.5 text-base font-semibold tabular-nums text-white">
+            <div
+              className={`flex items-baseline gap-1.5 font-semibold tabular-nums text-white ${
+                compact ? "text-sm" : "text-base"
+              }`}
+            >
               {it.value}
               <span
                 className="text-xs"

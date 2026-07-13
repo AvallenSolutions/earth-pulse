@@ -29,21 +29,34 @@ async function text(url: string, big = false): Promise<string> {
   return res.text();
 }
 
-/** NOAA GML weekly Mauna Loa CO2. Columns: yr,mon,day,decimal,ppm,days,1yr ago,10yr ago,since1800 */
+/** NOAA GML daily Mauna Loa CO2 (the Keeling record, updated each day).
+ * Columns: yr,mon,day,decimal_year,ppm. The year-on-year delta comes from
+ * the closest reading to 365 days earlier in the same file. */
 async function fetchCo2(): Promise<Vitals["co2"]> {
   const csv = await text(
-    "https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_weekly_mlo.csv"
+    "https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_daily_mlo.csv"
   );
   const rows = csv
     .split("\n")
     .filter((l) => l && !l.startsWith("#"))
-    .map((l) => l.split(",").map(Number));
+    .map((l) => l.split(",").map(Number))
+    .filter((r) => Number.isFinite(r[4]) && r[4] > 0);
   const last = rows[rows.length - 1];
-  const [yr, mon, day, , ppm, , oneYearAgo] = last;
-  if (!Number.isFinite(ppm) || ppm <= 0) return null;
+  const [yr, mon, day, dec, ppm] = last;
+  // closest reading to one year earlier (within ~10 days)
+  let oneYearAgo: number | null = null;
+  let bestGap = 0.03; // ~11 days in decimal years
+  for (let i = rows.length - 1; i >= 0 && rows[i][3] > dec - 1.1; i--) {
+    const gap = Math.abs(rows[i][3] - (dec - 1));
+    if (gap < bestGap) {
+      bestGap = gap;
+      oneYearAgo = rows[i][4];
+    }
+  }
   return {
     ppm,
-    delta1yr: Number((ppm - oneYearAgo).toFixed(2)),
+    delta1yr:
+      oneYearAgo !== null ? Number((ppm - oneYearAgo).toFixed(2)) : 0,
     date: `${day} ${MONTHS[mon - 1]} ${yr}`,
   };
 }
