@@ -7,13 +7,22 @@ import type { Vitals } from "@/lib/vitals";
  * server-rendered (ISR, 6h); any feed that failed is simply not shown.
  */
 export function VitalsStrip({ vitals }: { vitals: Vitals }) {
-  const items: { label: string; value: string; detail: string }[] = [];
+  const items: {
+    label: string;
+    value: string;
+    detail: string;
+    /** true when the trend is moving the wrong way for the planet */
+    worsening: boolean;
+    arrow: "up" | "down";
+  }[] = [];
 
   if (vitals.co2) {
     items.push({
       label: "Atmospheric CO2",
       value: `${vitals.co2.ppm.toFixed(1)} ppm`,
       detail: `${vitals.co2.delta1yr >= 0 ? "+" : ""}${vitals.co2.delta1yr} vs last year · ${vitals.co2.date}`,
+      worsening: vitals.co2.delta1yr > 0,
+      arrow: vitals.co2.delta1yr >= 0 ? "up" : "down",
     });
   }
   if (vitals.temp) {
@@ -21,6 +30,8 @@ export function VitalsStrip({ vitals }: { vitals: Vitals }) {
       label: "Global temperature",
       value: `${vitals.temp.anomaly >= 0 ? "+" : ""}${vitals.temp.anomaly.toFixed(2)} °C`,
       detail: `vs 1951-1980 · ${vitals.temp.monthLabel}`,
+      worsening: vitals.temp.anomaly > 0,
+      arrow: vitals.temp.anomaly >= 0 ? "up" : "down",
     });
   }
   if (vitals.seaIce) {
@@ -28,6 +39,8 @@ export function VitalsStrip({ vitals }: { vitals: Vitals }) {
       label: "Arctic sea ice",
       value: `${vitals.seaIce.extent.toFixed(2)}M km²`,
       detail: `${vitals.seaIce.anomalyPct}% vs 1981-2010 · ${vitals.seaIce.date}`,
+      worsening: vitals.seaIce.anomalyPct < 0,
+      arrow: vitals.seaIce.anomalyPct < 0 ? "down" : "up",
     });
   }
   if (items.length === 0) return null;
@@ -40,8 +53,15 @@ export function VitalsStrip({ vitals }: { vitals: Vitals }) {
             <div className="text-[10px] font-medium uppercase tracking-wide text-[#898781]">
               {it.label}
             </div>
-            <div className="text-base font-semibold tabular-nums text-white">
+            <div className="flex items-baseline gap-1.5 text-base font-semibold tabular-nums text-white">
               {it.value}
+              <span
+                className="text-xs"
+                style={{ color: it.worsening ? "#e66767" : "#199e70" }}
+                aria-label={it.worsening ? "worsening" : "improving"}
+              >
+                {it.arrow === "up" ? "▲" : "▼"}
+              </span>
             </div>
             <div className="text-[10px] tabular-nums text-[#898781]">
               {it.detail}

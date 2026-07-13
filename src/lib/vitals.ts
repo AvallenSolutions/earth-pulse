@@ -17,10 +17,12 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-async function text(url: string): Promise<string> {
-  // NASA GISS 403s Node's default user agent; identify ourselves properly
+async function text(url: string, big = false): Promise<string> {
+  // NASA GISS 403s Node's default user agent; identify ourselves properly.
+  // Files over 2MB exceed Next's data-cache limit, so those skip it; the
+  // page-level ISR (6h) still bounds how often they are fetched.
   const res = await fetch(url, {
-    ...REVALIDATE,
+    ...(big ? { cache: "no-store" as const } : REVALIDATE),
     headers: { "User-Agent": "earth-pulse/1.0 (public climate dashboard)" },
   });
   if (!res.ok) throw new Error(`${res.status} for ${url}`);
@@ -71,7 +73,7 @@ async function fetchSeaIce(): Promise<Vitals["seaIce"]> {
   const base =
     "https://noaadata.apps.nsidc.org/NOAA/G02135/north/daily/data/";
   const [daily, clim] = await Promise.all([
-    text(`${base}N_seaice_extent_daily_v4.0.csv`),
+    text(`${base}N_seaice_extent_daily_v4.0.csv`, true),
     text(`${base}N_seaice_extent_climatology_1981-2010_v4.0.csv`),
   ]);
   const dailyRows = daily.split("\n").filter((l) => /^\d{4},/.test(l.trim()));

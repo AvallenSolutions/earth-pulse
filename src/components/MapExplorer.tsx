@@ -53,17 +53,30 @@ export function MapExplorer({
   metrics,
   countries,
   vitals,
+  initialMetric,
+  initialYear,
+  initialView,
 }: {
   metrics: Metric[];
   countries: Country[];
   vitals: Vitals;
+  initialMetric?: string;
+  initialYear?: number;
+  initialView?: string;
 }) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const [metricId, setMetricId] = useState(metrics[0].id);
+  const [metricId, setMetricId] = useState(
+    metrics.some((m) => m.id === initialMetric) ? initialMetric! : metrics[0].id
+  );
   const metric = metrics.find((m) => m.id === metricId)!;
-  const [year, setYear] = useState(metric.lastYear);
+  const [year, setYear] = useState(() =>
+    initialYear
+      ? Math.min(Math.max(initialYear, metric.firstYear), metric.lastYear)
+      : metric.lastYear
+  );
+  const [globeOn, setGlobeOn] = useState(initialView !== "flat");
   const [playing, setPlaying] = useState(false);
   const [hover, setHover] = useState<Hover | null>(null);
   const [series, setSeries] = useState<SeriesFile>({});
@@ -83,13 +96,32 @@ export function MapExplorer({
       container: mapContainer.current,
       style: {
         version: 8,
+        projection: { type: "globe" },
+        // Space fades into a thin blue atmosphere around the globe
+        sky: {
+          "sky-color": "#04060c",
+          "horizon-color": "#274a80",
+          "fog-color": "#0a1420",
+          "sky-horizon-blend": 0.6,
+          "horizon-fog-blend": 0.6,
+          "fog-ground-blend": 0.85,
+          "atmosphere-blend": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            0, 1,
+            5, 1,
+            7, 0,
+          ],
+        },
         sources: {},
         layers: [
-          { id: "bg", type: "background", paint: { "background-color": "#0d0d0d" } },
+          // Deep ocean navy; the page behind stays near-black
+          { id: "bg", type: "background", paint: { "background-color": "#0a1420" } },
         ],
       },
-      center: [10, 25],
-      zoom: 1.6,
+      center: [10, 18],
+      zoom: 1.9,
       minZoom: 1,
       maxZoom: 7,
       attributionControl: false,
@@ -122,7 +154,24 @@ export function MapExplorer({
         id: "country-borders",
         type: "line",
         source: "countries",
-        paint: { "line-color": "#0d0d0d", "line-width": 0.75 },
+        paint: { "line-color": "#0a1420", "line-width": 0.75 },
+      });
+      // Soft glow beneath the crisp hover outline
+      map.addLayer({
+        id: "country-hover-glow",
+        type: "line",
+        source: "countries",
+        paint: {
+          "line-color": "#ffffff",
+          "line-blur": 6,
+          "line-width": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            6,
+            0,
+          ],
+          "line-opacity": 0.45,
+        },
       });
       map.addLayer({
         id: "country-hover",
@@ -259,9 +308,26 @@ export function MapExplorer({
     map.setPaintProperty(
       "country-borders",
       "line-color",
-      satOn ? "rgba(255,255,255,0.25)" : "#0d0d0d"
+      satOn ? "rgba(255,255,255,0.25)" : "#0a1420"
     );
   }, [satOn, satDate, mapReady]);
+
+  // Globe <-> flat projection
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    map.setProjection({ type: globeOn ? "globe" : "mercator" });
+  }, [globeOn, mapReady]);
+
+  // Keep the URL shareable: /?metric=...&year=...&view=...
+  useEffect(() => {
+    const params = new URLSearchParams({
+      metric: metricId,
+      year: String(year),
+      view: globeOn ? "globe" : "flat",
+    });
+    window.history.replaceState(null, "", `?${params.toString()}`);
+  }, [metricId, year, globeOn]);
 
   // Active fires layer (NASA FIRMS via our proxy so the key stays server-side)
   useEffect(() => {
@@ -499,7 +565,7 @@ export function MapExplorer({
       </div>
 
       {/* Metric picker */}
-      <div className="absolute left-4 top-20 z-10 max-w-xs rounded-xl border border-white/10 bg-[#1a1a19]/90 p-3 backdrop-blur">
+      <div className="absolute left-4 top-28 z-10 max-h-[calc(100dvh-220px)] max-w-xs overflow-y-auto rounded-xl border border-white/10 bg-[#1a1a19]/90 p-3 backdrop-blur">
         {domains.map((d) => (
           <div key={d} className="mb-2 last:mb-0">
             <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-[#898781]">
@@ -542,11 +608,12 @@ export function MapExplorer({
         </p>
         {/* Legend */}
         <div className="mt-2">
-          <div className="flex h-2 overflow-hidden rounded-full">
-            {legendColours.map((c) => (
-              <div key={c} className="h-full flex-1" style={{ background: c }} />
-            ))}
-          </div>
+          <div
+            className="h-2 rounded-full"
+            style={{
+              background: `linear-gradient(to right, ${legendColours.join(", ")})`,
+            }}
+          />
           <div className="mt-0.5 flex justify-between text-[10px] tabular-nums text-[#898781]">
             <span>
               {metric.scale[0]}
@@ -557,6 +624,32 @@ export function MapExplorer({
         </div>
       </div>
 
+      {/* Globe / flat toggle */}
+      <button
+        onClick={() => setGlobeOn((g) => !g)}
+        className="absolute bottom-24 right-4 z-10 flex items-center gap-2 rounded-full border border-white/10 bg-[#1a1a19]/90 px-3 py-2 text-xs text-[#c3c2b7] backdrop-blur transition-colors hover:bg-[#1a1a19] hover:text-white"
+        aria-pressed={globeOn}
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+          {globeOn ? (
+            <path
+              d="M2 2 h10 M2 7 h10 M2 12 h10 M4 2 v10 M10 2 v10"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              fill="none"
+              strokeLinecap="round"
+            />
+          ) : (
+            <g stroke="currentColor" strokeWidth="1.2" fill="none">
+              <circle cx="7" cy="7" r="5.5" />
+              <ellipse cx="7" cy="7" rx="2.5" ry="5.5" />
+              <path d="M1.8 5 h10.4 M1.8 9 h10.4" />
+            </g>
+          )}
+        </svg>
+        {globeOn ? "Flat map" : "Globe"}
+      </button>
+
       {/* Time slider */}
       <div className="absolute inset-x-0 bottom-6 z-10 mx-auto w-[min(680px,92%)] rounded-xl border border-white/10 bg-[#1a1a19]/90 px-4 py-3 backdrop-blur">
         <div className="flex items-center gap-3">
@@ -566,9 +659,18 @@ export function MapExplorer({
               setPlaying((p) => !p);
             }}
             aria-label={playing ? "Pause" : "Play"}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-black"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-black transition-transform hover:scale-105"
           >
-            {playing ? "❚❚" : "▶"}
+            {playing ? (
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                <rect x="1" y="0" width="3.5" height="12" rx="1" fill="currentColor" />
+                <rect x="7.5" y="0" width="3.5" height="12" rx="1" fill="currentColor" />
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                <path d="M2 0.8 L11 6 L2 11.2 Z" fill="currentColor" />
+              </svg>
+            )}
           </button>
           <input
             type="range"
