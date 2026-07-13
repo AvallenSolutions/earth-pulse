@@ -116,6 +116,117 @@
     "lastYear": 2024
   },
   {
+    "id": "water_stress",
+    "name": "Water stress",
+    "unit": "% of renewable resources withdrawn",
+    "domain": "water",
+    "source": "FAO AQUASTAT (SDG 6.4.2) via Our World in Data",
+    "sourceUrl": "https://ourworldindata.org/water-use-stress",
+    "explainer": "How much of a country's renewable freshwater is withdrawn each year. Above 25% counts as stressed; above 100% means drawing down reserves.",
+    "scale": [
+      0,
+      1000
+    ],
+    "scaleType": "sequential",
+    "stops": [
+      0,
+      10,
+      20,
+      40,
+      70,
+      100,
+      300,
+      1000
+    ],
+    "firstYear": 2000,
+    "lastYear": 2022
+  },
+  {
+    "id": "water_per_capita",
+    "name": "Renewable water per person",
+    "unit": "m³/person/year",
+    "domain": "water",
+    "source": "FAO AQUASTAT via Our World in Data",
+    "sourceUrl": "https://ourworldindata.org/water-use-stress",
+    "explainer": "Each person's share of the country's renewable freshwater. Below 1,700 m³ is water stress; below 1,000 m³ is scarcity.",
+    "scale": [
+      0,
+      100000
+    ],
+    "scaleType": "sequential",
+    "stops": [
+      0,
+      500,
+      1000,
+      1700,
+      5000,
+      15000,
+      40000,
+      100000
+    ],
+    "firstYear": 1961,
+    "lastYear": 2022
+  },
+  {
+    "id": "safe_drinking_water",
+    "name": "Safely managed drinking water",
+    "unit": "% of population",
+    "domain": "water",
+    "source": "WHO/UNICEF JMP via Our World in Data",
+    "sourceUrl": "https://ourworldindata.org/water-access",
+    "explainer": "The share of people with safe drinking water at home, available when needed and free from contamination.",
+    "scale": [
+      0,
+      100
+    ],
+    "scaleType": "sequential",
+    "firstYear": 2000,
+    "lastYear": 2024
+  },
+  {
+    "id": "precipitation",
+    "name": "Annual precipitation",
+    "unit": "mm/year",
+    "domain": "water",
+    "source": "Copernicus Climate Change Service (ERA5) via Our World in Data",
+    "sourceUrl": "https://ourworldindata.org/grapher/average-precipitation-per-year",
+    "explainer": "Total rain and snow that fell over a country in a year, averaged across its land area.",
+    "scale": [
+      0,
+      3000
+    ],
+    "scaleType": "sequential",
+    "stops": [
+      0,
+      100,
+      250,
+      500,
+      800,
+      1200,
+      2000,
+      3000
+    ],
+    "firstYear": 1940,
+    "lastYear": 2025
+  },
+  {
+    "id": "precip_anomaly",
+    "name": "Rainfall anomaly",
+    "unit": "% vs 1961-1990",
+    "domain": "water",
+    "source": "Derived from Copernicus ERA5 precipitation via Our World in Data",
+    "sourceUrl": "https://ourworldindata.org/grapher/average-precipitation-per-year",
+    "explainer": "How much wetter (blue) or drier (red) a country's year was compared with its 1961-1990 average. A simple drought and deluge signal.",
+    "scale": [
+      -50,
+      50
+    ],
+    "scaleType": "diverging",
+    "flipDiverging": true,
+    "firstYear": 1940,
+    "lastYear": 2025
+  },
+  {
     "id": "pm25",
     "name": "Air pollution (PM2.5)",
     "unit": "µg/m³ annual mean",

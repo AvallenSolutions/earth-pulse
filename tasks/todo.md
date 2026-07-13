@@ -37,8 +37,18 @@ Full plan: [PLAN.md](../PLAN.md).
 - [x] NASA GIBS satellite imagery (keyless) with date picker back to 2012
 - [x] All verified in browser (satellite + fires + air simultaneously)
 
-## Phase 3 — Water
-- [ ] SPEI drought layer, Copernicus drought/flood alerts, AQUASTAT, Aqueduct
+## Phase 3 — Water ✅ (13 Jul 2026)
+- [x] Five water metrics in the historical tier: water stress (SDG 6.4.2),
+      renewable water per person, safely managed drinking water, annual
+      precipitation (ERA5, 1940+), and a derived rainfall anomaly vs
+      1961-1990 (the drought/deluge signal; ingest now supports derived
+      metrics and flipped diverging scales)
+- [x] Copernicus GloFAS river flood alerts (days 1-15) as a live layer via
+      cached proxy /api/floods
+- [x] Verified in browser: 2024 shows the Amazon + southern Africa droughts
+- [ ] Copernicus GDO drought indicator layer: BLOCKED — the relocated
+      service (drought.emergency.copernicus.eu) rejects unauthenticated WMS
+      GetMap. Revisit; SPEI NetCDF country aggregation is the fallback.
 
 ## Phase 4 — Ice, oceans, land & life
 - [ ] Sea level, ocean heat, glaciers, GFW forest loss, disasters, methane

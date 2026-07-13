@@ -21,6 +21,10 @@ export type MetricDef = {
   scaleType: "sequential" | "diverging";
   /** Optional explicit stop values for skewed metrics (one per ramp colour). */
   stops?: number[];
+  /** Diverging only: flip so low values are warm (e.g. dry = red). */
+  flipDiverging?: boolean;
+  /** Derived metrics are computed from another metric during ingest. */
+  derived?: { from: string; kind: "anomaly_pct"; baselineYears: [number, number] };
 };
 
 export const DATASET_URLS = {
@@ -131,6 +135,91 @@ export const METRICS: MetricDef[] = [
     scale: [0, 100000],
     scaleType: "sequential",
     stops: [0, 3000, 8000, 15000, 25000, 40000, 60000, 100000],
+  },
+  {
+    id: "water_stress",
+    name: "Water stress",
+    unit: "% of renewable resources withdrawn",
+    domain: "water",
+    source: "FAO AQUASTAT (SDG 6.4.2) via Our World in Data",
+    sourceUrl: "https://ourworldindata.org/water-use-stress",
+    licence: "CC BY 4.0",
+    explainer:
+      "How much of a country's renewable freshwater is withdrawn each year. Above 25% counts as stressed; above 100% means drawing down reserves.",
+    timeResolution: "annual",
+    dataset: { grapherSlug: "freshwater-withdrawals-as-a-share-of-internal-resources" },
+    column: "_6_4_2__er_h2o_stress__no_breakdown",
+    scale: [0, 1000],
+    scaleType: "sequential",
+    stops: [0, 10, 20, 40, 70, 100, 300, 1000],
+  },
+  {
+    id: "water_per_capita",
+    name: "Renewable water per person",
+    unit: "m³/person/year",
+    domain: "water",
+    source: "FAO AQUASTAT via Our World in Data",
+    sourceUrl: "https://ourworldindata.org/water-use-stress",
+    licence: "CC BY 4.0",
+    explainer:
+      "Each person's share of the country's renewable freshwater. Below 1,700 m³ is water stress; below 1,000 m³ is scarcity.",
+    timeResolution: "annual",
+    dataset: { grapherSlug: "renewable-water-resources-per-capita" },
+    column: "er_h2o_intr_pc",
+    scale: [0, 100000],
+    scaleType: "sequential",
+    stops: [0, 500, 1000, 1700, 5000, 15000, 40000, 100000],
+  },
+  {
+    id: "safe_drinking_water",
+    name: "Safely managed drinking water",
+    unit: "% of population",
+    domain: "water",
+    source: "WHO/UNICEF JMP via Our World in Data",
+    sourceUrl: "https://ourworldindata.org/water-access",
+    licence: "CC BY 4.0",
+    explainer:
+      "The share of people with safe drinking water at home, available when needed and free from contamination.",
+    timeResolution: "annual",
+    dataset: { grapherSlug: "proportion-using-safely-managed-drinking-water" },
+    column: "wat_sm__residence_total",
+    scale: [0, 100],
+    scaleType: "sequential",
+  },
+  {
+    id: "precipitation",
+    name: "Annual precipitation",
+    unit: "mm/year",
+    domain: "water",
+    source: "Copernicus Climate Change Service (ERA5) via Our World in Data",
+    sourceUrl: "https://ourworldindata.org/grapher/average-precipitation-per-year",
+    licence: "CC BY 4.0",
+    explainer:
+      "Total rain and snow that fell over a country in a year, averaged across its land area.",
+    timeResolution: "annual",
+    dataset: { grapherSlug: "average-precipitation-per-year" },
+    column: "total_precipitation",
+    scale: [0, 3000],
+    scaleType: "sequential",
+    stops: [0, 100, 250, 500, 800, 1200, 2000, 3000],
+  },
+  {
+    id: "precip_anomaly",
+    name: "Rainfall anomaly",
+    unit: "% vs 1961-1990",
+    domain: "water",
+    source: "Derived from Copernicus ERA5 precipitation via Our World in Data",
+    sourceUrl: "https://ourworldindata.org/grapher/average-precipitation-per-year",
+    licence: "CC BY 4.0",
+    explainer:
+      "How much wetter (blue) or drier (red) a country's year was compared with its 1961-1990 average. A simple drought and deluge signal.",
+    timeResolution: "annual",
+    dataset: { grapherSlug: "average-precipitation-per-year" },
+    column: "total_precipitation",
+    scale: [-50, 50],
+    scaleType: "diverging",
+    flipDiverging: true,
+    derived: { from: "precipitation", kind: "anomaly_pct", baselineYears: [1961, 1990] },
   },
   {
     id: "pm25",

@@ -72,6 +72,7 @@ export function MapExplorer({
   const [satOn, setSatOn] = useState(false);
   const [satDate, setSatDate] = useState(latestImageryDate);
   const [firesOn, setFiresOn] = useState(false);
+  const [floodsOn, setFloodsOn] = useState(false);
   const [airOn, setAirOn] = useState(false);
   const [airStatus, setAirStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
@@ -215,7 +216,12 @@ export function MapExplorer({
           "interpolate",
           ["linear"],
           ["feature-state", "value"],
-          ...scaleStops(metric.scaleType, metric.scale, metric.stops),
+          ...scaleStops(
+            metric.scaleType,
+            metric.scale,
+            metric.stops,
+            metric.flipDiverging
+          ),
         ],
       ]);
       // keep the tooltip's value in sync if a country is hovered
@@ -274,6 +280,24 @@ export function MapExplorer({
       map.addLayer({ id: "fires", type: "raster", source: "fires" });
     }
   }, [firesOn, mapReady]);
+
+  // River flood alerts (Copernicus GloFAS days 1-15 summary, via our proxy)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    if (map.getLayer("floods")) map.removeLayer("floods");
+    if (map.getSource("floods")) map.removeSource("floods");
+    if (floodsOn) {
+      map.addSource("floods", {
+        type: "raster",
+        tiles: ["/api/floods?bbox={bbox-epsg-3857}"],
+        tileSize: 256,
+        attribution:
+          'Floods: <a href="https://global-flood.emergency.copernicus.eu">Copernicus GloFAS</a>',
+      });
+      map.addLayer({ id: "floods", type: "raster", source: "floods" });
+    }
+  }, [floodsOn, mapReady]);
 
   // Air quality layer (OpenAQ latest PM2.5 via our aggregating proxy)
   useEffect(() => {
@@ -357,10 +381,13 @@ export function MapExplorer({
   const sliderMin = metric.firstYear;
   const sliderMax = metric.lastYear;
 
+  const divergingRun = [...DIVERGING.cool, DIVERGING.mid, ...DIVERGING.warm];
   const legendColours =
     metric.scaleType === "sequential"
       ? SEQUENTIAL
-      : [...DIVERGING.cool, DIVERGING.mid, ...DIVERGING.warm];
+      : metric.flipDiverging
+        ? [...divergingRun].reverse()
+        : divergingRun;
 
   const onSelectCountry = useCallback((c: Country) => {
     window.location.href = `/country/${c.iso3}`;
@@ -421,6 +448,15 @@ export function MapExplorer({
             type="checkbox"
             checked={firesOn}
             onChange={(e) => setFiresOn(e.target.checked)}
+            className="h-4 w-4 accent-white"
+          />
+        </label>
+        <label className="flex cursor-pointer items-center justify-between py-1 text-sm text-[#c3c2b7]">
+          <span>River flood alerts (15 days)</span>
+          <input
+            type="checkbox"
+            checked={floodsOn}
+            onChange={(e) => setFloodsOn(e.target.checked)}
             className="h-4 w-4 accent-white"
           />
         </label>

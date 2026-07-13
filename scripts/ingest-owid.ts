@@ -70,6 +70,44 @@ async function main() {
   }
 
   mkdirSync("public/data", { recursive: true });
+  mkdirSync("public/data/series", { recursive: true });
+
+  // metric id -> iso3 -> sorted [year, value][]; kept for derived metrics
+  const allSeries = new Map<string, Map<string, [number, number][]>>();
+
+  const writeMetricOutputs = (
+    m: MetricDef,
+    series: Map<string, [number, number][]>
+  ) => {
+    const years = new Map<number, Record<string, number>>();
+    const seriesOut: Record<string, [number, number][]> = {};
+    let firstYear = Infinity;
+    let lastYear = -Infinity;
+    for (const [iso3, points] of series) {
+      points.sort((a, b) => a[0] - b[0]);
+      seriesOut[iso3] = points;
+      for (const [year, value] of points) {
+        if (iso3 === "WLD") continue; // world stays out of country choropleths
+        firstYear = Math.min(firstYear, year);
+        lastYear = Math.max(lastYear, year);
+        if (!years.has(year)) years.set(year, {});
+        years.get(year)![iso3] = value;
+      }
+    }
+    mkdirSync(`public/data/choropleth/${m.id}`, { recursive: true });
+    for (const [year, values] of years) {
+      writeFileSync(
+        `public/data/choropleth/${m.id}/${year}.json`,
+        JSON.stringify(values)
+      );
+    }
+    writeFileSync(`public/data/series/${m.id}.json`, JSON.stringify(seriesOut));
+    (m as MetricDef & { firstYear?: number; lastYear?: number }).firstYear =
+      firstYear;
+    (m as MetricDef & { firstYear?: number; lastYear?: number }).lastYear =
+      lastYear;
+    console.log(`  ${m.id}: ${series.size} countries, ${firstYear}-${lastYear}`);
+  };
 
   for (const [key, metrics] of byDataset) {
     const path = `data/raw/${key}.csv`;
@@ -87,6 +125,7 @@ async function main() {
     const yearCol = col("year")!;
 
     for (const m of metrics) {
+      if (m.derived) continue; // computed after all source metrics load
       // Grapher CSVs have exactly one value column beyond Entity/Code/Year.
       const valueCol = cols.includes(m.column)
         ? m.column
@@ -122,40 +161,31 @@ async function main() {
         series.set(iso3, [...(series.get(iso3) ?? []), [year, value]]);
       }
 
-      // Write per-year choropleth files and the per-metric series file
-      const years = new Map<number, Record<string, number>>();
-      const seriesOut: Record<string, [number, number][]> = {};
-      let firstYear = Infinity;
-      let lastYear = -Infinity;
-      for (const [iso3, points] of series) {
-        points.sort((a, b) => a[0] - b[0]);
-        seriesOut[iso3] = points;
-        for (const [year, value] of points) {
-          if (iso3 === "WLD") continue; // world stays out of country choropleths
-          firstYear = Math.min(firstYear, year);
-          lastYear = Math.max(lastYear, year);
-          if (!years.has(year)) years.set(year, {});
-          years.get(year)![iso3] = value;
-        }
-      }
-      mkdirSync(`public/data/choropleth/${m.id}`, { recursive: true });
-      for (const [year, values] of years) {
-        writeFileSync(
-          `public/data/choropleth/${m.id}/${year}.json`,
-          JSON.stringify(values)
-        );
-      }
-      mkdirSync("public/data/series", { recursive: true });
-      writeFileSync(`public/data/series/${m.id}.json`, JSON.stringify(seriesOut));
+      allSeries.set(m.id, series);
+      writeMetricOutputs(m, series);
+    }
+  }
 
-      (m as MetricDef & { firstYear?: number; lastYear?: number }).firstYear =
-        firstYear;
-      (m as MetricDef & { firstYear?: number; lastYear?: number }).lastYear =
-        lastYear;
-      console.log(
-        `  ${m.id}: ${series.size} countries, ${firstYear}-${lastYear}`
+  // Derived metrics: computed from an already-ingested metric's series
+  for (const m of METRICS.filter((x) => x.derived)) {
+    const { from, kind, baselineYears } = m.derived!;
+    const source = allSeries.get(from);
+    if (!source) throw new Error(`derived ${m.id}: source ${from} not ingested`);
+    if (kind !== "anomaly_pct") throw new Error(`unknown derived kind ${kind}`);
+    const [b0, b1] = baselineYears;
+    const series = new Map<string, [number, number][]>();
+    for (const [iso3, points] of source) {
+      const base = points.filter(([y]) => y >= b0 && y <= b1);
+      if (base.length < 20) continue; // need a solid baseline
+      const mean = base.reduce((s, [, v]) => s + v, 0) / base.length;
+      if (mean <= 0) continue;
+      series.set(
+        iso3,
+        points.map(([y, v]) => [y, Number((((v - mean) / mean) * 100).toFixed(1))])
       );
     }
+    allSeries.set(m.id, series);
+    writeMetricOutputs(m, series);
   }
 
   // UI-facing registry (includes year bounds discovered during ingest)
@@ -173,6 +203,7 @@ async function main() {
         scale: m.scale,
         scaleType: m.scaleType,
         stops: m.stops,
+        flipDiverging: m.flipDiverging,
         firstYear: (m as MetricDef & { firstYear?: number }).firstYear,
         lastYear: (m as MetricDef & { lastYear?: number }).lastYear,
       })),

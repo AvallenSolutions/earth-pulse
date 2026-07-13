@@ -30,7 +30,8 @@ export const DIVERGING = {
 export function scaleStops(
   scaleType: "sequential" | "diverging",
   [min, max]: [number, number],
-  customStops?: number[]
+  customStops?: number[],
+  flipDiverging?: boolean
 ): (number | string)[] {
   const stops: (number | string)[] = [];
   if (scaleType === "sequential") {
@@ -40,14 +41,18 @@ export function scaleStops(
       stops.push(v, c);
     });
   } else {
+    // Default: low = cool (blue), high = warm (red). Flipped: low = warm,
+    // for metrics where low is the "hot" pole (e.g. drought).
     const { cool, mid, warm } = DIVERGING;
-    stops.push(min, cool[0]);
-    stops.push(min / 2, cool[1]);
-    stops.push(min / 6, cool[2]);
+    const lowArm = flipDiverging ? [warm[2], warm[1], warm[0]] : cool;
+    const highArm = flipDiverging ? [cool[2], cool[1], cool[0]] : warm;
+    stops.push(min, lowArm[0]);
+    stops.push(min / 2, lowArm[1]);
+    stops.push(min / 6, lowArm[2]);
     stops.push(0, mid);
-    stops.push(max / 6, warm[0]);
-    stops.push(max / 2, warm[1]);
-    stops.push(max, warm[2]);
+    stops.push(max / 6, highArm[0]);
+    stops.push(max / 2, highArm[1]);
+    stops.push(max, highArm[2]);
   }
   return stops;
 }
