@@ -9,6 +9,7 @@ import type { Vitals } from "@/lib/vitals";
 import { Sparkline } from "./Sparkline";
 import { CountrySearch } from "./CountrySearch";
 import { VitalsStrip } from "./VitalsStrip";
+import { EventPopup, type MapEvent } from "./EventPopup";
 
 /** Latest full GIBS imagery day (UTC yesterday). */
 function latestImageryDate(): string {
@@ -79,6 +80,9 @@ export function MapExplorer({
   const [globeOn, setGlobeOn] = useState(initialView !== "flat");
   const [playing, setPlaying] = useState(false);
   const [hover, setHover] = useState<Hover | null>(null);
+  const [popup, setPopup] = useState<
+    { event: MapEvent; left: number; top: number } | null
+  >(null);
   const [series, setSeries] = useState<SeriesFile>({});
   const valuesRef = useRef<Record<string, number>>({});
   const paintedIso = useRef<Set<string>>(new Set());
@@ -236,7 +240,55 @@ export function MapExplorer({
       map.getCanvas().style.cursor = "";
       setHover(null);
     });
+    const popupAt = (e: maplibregl.MapMouseEvent, event: MapEvent) => {
+      const w = map.getCanvas().clientWidth;
+      const h = map.getCanvas().clientHeight;
+      setPopup({
+        event,
+        left: Math.min(e.point.x + 12, w - 300),
+        top: Math.min(Math.max(e.point.y - 10, 8), h - 240),
+      });
+    };
+    map.on("click", "quakes", (e) => {
+      const p = e.features?.[0]?.properties;
+      if (!p) return;
+      popupAt(e, {
+        kind: "quake",
+        mag: Number(p.mag),
+        depth: Number(p.depth),
+        place: String(p.place ?? ""),
+        time: Number(p.time),
+        url: String(p.url ?? ""),
+      });
+    });
+    map.on("click", "disasters", (e) => {
+      const p = e.features?.[0]?.properties;
+      if (!p) return;
+      popupAt(e, {
+        kind: "disaster",
+        type: String(p.type),
+        level: String(p.level),
+        name: String(p.name ?? ""),
+        country: String(p.country ?? ""),
+        severity: String(p.severity ?? ""),
+        from: String(p.from ?? ""),
+        to: String(p.to ?? ""),
+        eventid: Number(p.eventid),
+      });
+    });
+    for (const layer of ["quakes", "disasters"]) {
+      map.on("mouseenter", layer, () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+    }
     map.on("click", "country-fills", (e) => {
+      // event dots sit above countries; don't navigate through them
+      const hits = map
+        .queryRenderedFeatures(e.point, {
+          layers: ["quakes", "disasters"].filter((l) => map.getLayer(l)),
+        })
+        .length;
+      if (hits > 0) return;
       const iso3 = e.features?.[0]?.properties.iso3;
       if (iso3) window.location.href = `/country/${iso3}`;
     });
@@ -394,16 +446,21 @@ export function MapExplorer({
       try {
         const res = await fetch("/api/quakes");
         if (!res.ok) throw new Error(String(res.status));
-        const { points } = (await res.json()) as { points: [number, number, number][] };
+        const { quakes } = (await res.json()) as {
+          quakes: {
+            lon: number; lat: number; mag: number; depth: number;
+            place: string; time: number; url: string;
+          }[];
+        };
         if (!alive || !mapRef.current || map.getSource("quakes")) return;
         map.addSource("quakes", {
           type: "geojson",
           data: {
             type: "FeatureCollection",
-            features: points.map(([lon, lat, mag]) => ({
+            features: quakes.map((q) => ({
               type: "Feature" as const,
-              properties: { mag },
-              geometry: { type: "Point" as const, coordinates: [lon, lat] },
+              properties: q,
+              geometry: { type: "Point" as const, coordinates: [q.lon, q.lat] },
             })),
           },
           attribution: 'Quakes: <a href="https://earthquake.usgs.gov">USGS</a>',
@@ -450,17 +507,21 @@ export function MapExplorer({
         const res = await fetch("/api/disasters");
         if (!res.ok) throw new Error(String(res.status));
         const { events } = (await res.json()) as {
-          events: [number, number, string, string, string][];
+          events: {
+            lon: number; lat: number; type: string; level: string;
+            name: string; country: string; severity: string;
+            from: string; to: string; eventid: number;
+          }[];
         };
         if (!alive || !mapRef.current || map.getSource("disasters")) return;
         map.addSource("disasters", {
           type: "geojson",
           data: {
             type: "FeatureCollection",
-            features: events.map(([lon, lat, type, level, name]) => ({
+            features: events.map((ev) => ({
               type: "Feature" as const,
-              properties: { type, level, name },
-              geometry: { type: "Point" as const, coordinates: [lon, lat] },
+              properties: ev,
+              geometry: { type: "Point" as const, coordinates: [ev.lon, ev.lat] },
             })),
           },
           attribution: 'Alerts: <a href="https://www.gdacs.org">GDACS</a>',
@@ -863,6 +924,16 @@ export function MapExplorer({
           <span>{sliderMax}</span>
         </div>
       </div>
+
+      {/* Event popup */}
+      {popup && (
+        <EventPopup
+          event={popup.event}
+          left={popup.left}
+          top={popup.top}
+          onClose={() => setPopup(null)}
+        />
+      )}
 
       {/* Hover tooltip */}
       {hover && (

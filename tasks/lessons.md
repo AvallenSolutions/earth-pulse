@@ -30,3 +30,7 @@ Corrections and patterns to remember for this project. Reviewed at session start
   for this reason while rendering perfectly.
 - **NASA GISS 403s Node's default user agent.** Send a real User-Agent on all
   agency fetches (vitals.ts does).
+- **Never deploy without Tim's express permission** (13 Jul 2026). Do not
+  chain `vercel deploy` / alias changes onto build or commit commands. Local
+  builds and git commits are fine; anything public-facing needs a fresh,
+  explicit yes each time.
