@@ -1,104 +1,100 @@
-# Handoff: Earth Pulse — global climate & environment dashboard
-Updated: 2026-07-14 14:00 | Branch: main | Worktree: main (~/Documents/GitHub/earth-pulse) | Dev port: 3300
-
-## Session 14 Jul: Phase 7 (plan: ~/.claude/plans/please-write-a-plan-replicated-lantern.md)
-- iPad stability FIXED and committed: drawer backdrop-blur over WebGL removed,
-  visibilitychange repaint added (887c1a3).
-- 7.1 DONE (0ab6f1d): weekly refresh workflow, client polling (ticker+quakes
-  2min, disasters 10min, air 30min, visibility-aware), freshness stamps in UI.
-  BLOCKED on Tim: `gh repo create AvallenSolutions/earth-pulse --private
-  --source . --push` (classifier refuses) + add VERCEL_TOKEN repo secret.
-- 7.2 DONE (c5e0978): 8 new metrics (consumption CO2, aviation, oil/gas elec,
-  sanitation, marine protected, ozone substances, urban share; waste + air
-  pollution deaths rejected, non-redistributable), Stripes.tsx, MoversPanel.tsx.
-- 7.3 DONE (fd46c3b): ingest-monthly.ts (CCKP ERA5 observed, NOT Open-Meteo),
-  monthly temp/precip anomalies 1950-2024, Monthly toggle + month play on the
-  map slider. Verified: GBR 2018 heatwave/BftE, PAK Jul 2022 +156%.
-- 7.4 MOSTLY DONE (c146dc5): precipitation projections to 2100 on the map
-  (ingest-projections.ts now variable-generic, tas+pr), IPCC AR6 Table 9.9
-  sea level fan on /planet (curated JSON, cross-checked vs IPCC exec summary
-  + EEA). Remaining: WRI Aqueduct water stress futures (source discovery).
-- 7.5 DONE (this session): three live layers — aurora (SWPC OVATION heatmap),
-  volcanoes (GVP recent+ongoing, popups), hurricanes (NHC active storms, empty
-  out of season). Hurricane forecast cone deferred (NHC ships it only as
-  shapefile zips). All verified in a fresh browser tab (Marapi popup, Arctic
-  aurora glow, Ring of Fire).
-- NEXT: 7.6 story mode + animated events, WRI Aqueduct water stress futures.
-  Not deployed; deploy needs Tim.
-- public/data now ~31MB. Fine for the repo and Vercel.
-- BROWSER-VERIFY GOTCHA (new, add to lessons): the in-app browser downscales
-  screenshots to ~800px when the viewport is wider, and click coordinates then
-  don't map to screenshot pixels. Set the viewport width <=800 (resize_window
-  width 760) so canvas==screenshot 1:1 before clicking small map features.
-  Also: a long-lived reused tab accumulates HMR patches that corrupt hook dep
-  arrays ("dependency array size changed"); open a FRESH tab for clean verify.
+# Handoff: Earth Pulse — Phase 7.6 (story mode, animated events, visual polish + starry sky)
+Updated: 2026-07-14 17:30 | Branch: main | Worktree: main (~/Documents/GitHub/earth-pulse) | Dev port: 3300
 
 ## Goal
-A free, public awareness dashboard for global climate/environment data: an interactive world
-map (globe or flat) with a time slider back to 1750 and forward to 2100, live real-time
-layers, per-country deep-dive pages, country comparison, and published future projections.
-Map-first, free-tier only, British English, no em dashes. LIVE at
-https://earth-pulse-alkatera.vercel.app (deployed = commit 30a90c3, in sync with main).
+Earth Pulse is a free public climate/environment dashboard: an interactive MapLibre globe
+(also flat) with a 1750→2100 time slider, ~38 country metrics, live layers, per-country
+pages, /planet and /compare. Live at https://earth-pulse-alkatera.vercel.app (deployed =
+commit 30a90c3, now well behind main — NOT yet redeployed). This session builds **Phase 7.6**,
+the final planned phase, plus extra visual polish Tim asked for:
 
-## Done (verified in browser + deployed)
-- Map explorer: MapLibre globe + flat toggle, NASA Blue Marble terrain, per-domain colour
-  ramps (src/lib/colors.ts), time slider with play, hover tooltips, idle globe spin.
-- 27 country metrics + 3 global metrics (static JSON in public/data, ingested via scripts/).
-- 6 live layers: satellite (GIBS), fires (FIRMS NOAA-20/21), floods (GloFAS), air quality
-  (OpenAQ), earthquakes (USGS), disaster alerts (GDACS). All proxied via /api/* routes.
-- 3 history layers following the year slider: storm tracks (IBTrACS 1842-2025, category
-  filter chips), M6+ quakes (USGS 1900+), disasters (GDACS 2000+). Clickable popups.
-- Futures: CMIP6 temperature projections 2026-2100, 3 scenarios (SSP1-2.6/2-4.5/5-8.5) via
-  World Bank CCKP, delta-method anchored to ERA5. Map slider extends to 2100 + scenario
-  chips; country pages show a scenario fan chart.
-- News-crawl event ticker (bottom), clickable vitals cards -> full-history modals (Keeling
-  curve 1958+, GISTEMP 1880+, NSIDC sea-ice minimum 1979+), daily CO2.
-- Country pages v2 (stat hero, ranks, deltas, world overlays, futures, neighbours),
-  /planet trends, /compare two countries, OG images, sitemap/robots.
-- Mobile: burger drawer holds all controls; map stays clear. Desktop unchanged (lg: split).
-  Verified at 375px and 1300px.
+1. **Story mode** — guided cinematic tours that fly the globe on rails while the timeline
+   plays and caption cards explain what you see. Reuse existing machinery (map.flyTo, the
+   play interval, metric/layer state setters). Stories: "CO2 since 1750", "A century of
+   storms", "Three futures" (temperature SSP scenarios to 2100). Shareable as `?story=co2`
+   via the existing URL-state pattern. Honour prefers-reduced-motion (no flight; instant steps).
+2. **Animated events** — make play mode feel alive: storm tracks draw themselves point-by-point
+   as the year advances; history quakes pulse (expanding ring) when they first appear, biggest
+   for M7+; subtle glow-breathing on the fires raster. All gated behind prefers-reduced-motion;
+   all rAF loops pause on document.hidden (same pattern as the idle spin).
+3. **Visual polish + realistic starry background** (Tim's addition): replace the flat near-black
+   space behind the globe with a real starfield — subtle, many small stars, a few brighter ones,
+   maybe faint parallax on drag/spin. Plus any tasteful polish that lifts the whole thing.
 
-## Done (unverified / caveats)
-- The browser preview pane is only ~800px wide and DPR 2; true desktop (>=1024) was checked
-  at 1300px via resize but not exhaustively. WebGL screenshots often show a black globe until
-  map.triggerRepaint() — that is a capture artifact, the map paints fine.
-- Copernicus GDO drought WMS is auth-blocked (not used). No pre-2000 located flood/wildfire
-  source (EM-DAT forbids redistribution) — history disasters start 2000, wildfires ~2022.
+Full plan: `~/.claude/plans/please-write-a-plan-replicated-lantern.md` (Phase 7 section).
+Phase tracker: tasks/todo.md (Phase 7 block, 7.1–7.5 ticked).
+
+## Done (verified in browser + committed, this Phase 7 session)
+- 7.1 always-fresh data (0ab6f1d): .github/workflows/refresh-data.yml weekly cron; client
+  polling (ticker+quakes 2min, disasters 10min, air 30min, visibility-aware, setData in place);
+  freshness.json stamps → "as of HH:MM" + "updated X ago" in drawer/panel/planet footer.
+- 7.2 (c5e0978): 8 new metrics; Stripes.tsx (warming stripes on country pages + /planet);
+  MoversPanel.tsx (biggest rises/falls, on /planet + desktop map column + drawer).
+- 7.3 (fd46c3b): scripts/ingest-monthly.ts (CCKP ERA5 monthly temp/precip anomalies,
+  1950-2024, 2.9MB); "Monthly" toggle on the slider (self-discovering via monthly/<m>/index.json),
+  month scrubbing + month play. Verified GBR 2018 heatwave, PAK Jul-2022 flood.
+- 7.4 partial (c146dc5): precipitation projections to 2100 (ingest-projections.ts now
+  variable-generic, tas+pr); IPCC AR6 sea-level fan on /planet
+  (public/data/planet/sealevel-projections.json).
+- 7.5 (35cf6e3): three live layers — aurora (/api/aurora, SWPC OVATION heatmap), volcanoes
+  (/api/volcanoes, GVP recent+ongoing, popups), hurricanes (/api/hurricanes, NHC active,
+  empty out of season). Verified in a fresh tab: Marapi popup, Arctic aurora glow, Ring of Fire.
+- iPad stability fix (887c1a3): drawer no longer uses backdrop-blur over WebGL;
+  visibilitychange → map.triggerRepaint().
+
+## Done (unverified / deferred)
+- 7.4 remaining: **WRI Aqueduct water stress futures (2030/50/80)** not built — needs source
+  discovery for a country-level futures CSV. Optional to fold into this session or leave.
+- Hurricane forecast CONE/track deferred: NHC ships them only as shapefile/KMZ zips,
+  disproportionate for a free-tier proxy (documented in src/app/api/hurricanes/route.ts).
 
 ## In flight
-- Nothing mid-edit. Working tree clean at commit 30a90c3. Session ended after deploying the
-  mobile burger-menu work and re-pointing the alias.
+- Nothing mid-edit. Working tree clean at 35cf6e3. This is a fresh start on 7.6.
 
-## Next (candidate directions, not yet started)
-1. Content-writer pass over all metric explainers (British English, plain language).
-2. More futures from published sources: CCKP precipitation, WRI Aqueduct water stress, IPCC
-   global tables (sea level, warming) on /planet.
-3. More metrics (each ~30 min via scripts/lib/registry.ts + ingest-owid.ts): oil/gas
-   electricity, consumption-based CO2, aviation, marine protected areas, sanitation.
-4. Monthly-resolution data (temperature, sea ice) to turn the year slider into a month slider.
-5. Accessibility audit; weekly ingest-freshness cron.
+## Next (build order for 7.6)
+1. **Starry background first** (self-contained, high visual payoff, easy to verify). The globe
+   scene is a MapLibre `sky` block in src/components/MapExplorer.tsx (~line 156-181: sky-color,
+   horizon-color, atmosphere-blend). Space is currently flat #04060c. Options: (a) a fixed CSS
+   starfield div behind the map canvas (map container bg is transparent-ish over #0d0d0d body),
+   or (b) a canvas/SVG star layer. A CSS/absolute starfield behind the map is simplest and
+   won't touch WebGL. Add faint twinkle + a few bright stars; keep it subtle, not a screensaver.
+2. **stories.ts + StoryPlayer.tsx** — typed story config (steps: {camera:{center,zoom}, metric,
+   yearRange|year, scenario?, layers?, caption, holdMs}); overlay with caption card + progress
+   dots + next/back/close. Drive via existing setters in MapExplorer. Entry: a "Stories" row in
+   the drawer + chips on the map. `?story=` deep link. Reduced-motion safe.
+3. **Animated events** — storm-track draw-on (line-gradient / progressive trim during play),
+   quake pulse (rAF ring on a duplicate circle layer), fires opacity breathing. Gate on
+   prefers-reduced-motion; pause rAF on document.hidden.
+4. Optional: WRI Aqueduct futures if time.
+5. Verify each in the browser, then update tasks/todo.md + this handoff.
 
 ## Gotchas and decisions
-- NEVER deploy without Tim's express permission (per-deploy, not per-session). Do NOT chain
-  `vercel deploy` onto build/commit. See memory no-deploy-without-permission.md.
-- Deploy flow (Vercel team = avallen-solutions): `vercel deploy --prod --yes`, wait for
-  Ready, then `vercel alias set <deployment-url> earth-pulse-alkatera.vercel.app`. The alias
-  does NOT move automatically. earth-pulse.vercel.app is another account's — we use -alkatera.
-- GitHub repo does NOT exist yet: `gh repo create AvallenSolutions/earth-pulse --private
-  --source . --push` was blocked by the permission classifier. Tim to run it or approve.
-- DB: earth_pulse schema inside the shared alkatera-lca-verifier Supabase project
-  (goriowvxkvmizwtenpju), because a new project costs $10/mo. Migrations via Supabase MCP.
-  App runs entirely on static JSON; DB holds countries+metrics only.
-- After bulk edits to MapExplorer.tsx, RESTART the dev server (preview_stop + preview_start);
-  Fast Refresh serves stale bundles (toggles set state but effects never run). See lessons.md.
+- **NEVER deploy without Tim's express, per-deploy permission.** Do not chain vercel deploy
+  onto build/commit. (memory: no-deploy-without-permission.md. The weekly refresh cron is the
+  ONE standing exception, and it isn't live yet.)
+- **Restart the dev server after bulk MapExplorer.tsx edits** (preview_stop + preview_start).
+  Fast Refresh serves stale bundles — toggles set state but effects never run. See lessons.md.
+- **Browser-verify traps (cost 40 min in 7.5, now in lessons.md):** the in-app Browser
+  downscales screenshots to ~800px when the viewport is wider, so click coords don't map to
+  screenshot pixels. Fix: resize_window to width ≤800 (e.g. 760) so canvas width == screenshot
+  width, then click the map.project() pixel. AND a long-lived reused tab accumulates HMR patches
+  that corrupt React hook dep arrays ("dependency array size changed") and silently break the map
+  init effect — open a FRESH tab (tabs_create) for a clean verify.
+- WebGL screenshots can show black/stale frames; call map.triggerRepaint() before screenshotting.
+  querySourceFeatures/queryRenderedFeatures return 0 until the map finishes loading — visual is truth.
 - Storm tracks must use unwrapped longitudes (>±180) or MapLibre draws a band round the planet.
-- NASA GISS 403s Node's default UA; vitals.ts sends a real User-Agent. SNPP satellite retired.
-- Data pipeline: scripts/ downloads to data/raw/ (gitignored), writes static JSON to
-  public/data/. Re-run: build-boundaries, ingest-owid, ingest-storms, ingest-quakes-history,
-  ingest-disasters-history, ingest-projections. Registry: scripts/lib/registry.ts.
+- Idle globe spin lives at ~MapExplorer.tsx line ~1120 (rAF, pauses on hidden/playing/popup) —
+  a good pattern to copy for animated events; also the thing to make sure parallax/starfield
+  cooperates with.
+- No new runtime deps — MapLibre + hand-rolled SVG/CSS cover all of this. British English, no em dashes.
+- public/data is ~31MB (fine for repo + Vercel).
 
 ## Pending Tim actions
-- Optional: create the GitHub remote (command above) — code is committed locally only.
-- Answer when relevant: content-writer pass vs more data vs monthly resolution as next focus.
-- API keys already set on Vercel production: NASA_FIRMS_KEY, OPENAQ_API_KEY,
-  NEXT_PUBLIC_SITE_URL. In local .env.local too.
+- **Create the GitHub repo** (blocks the weekly refresh cron): `gh repo create
+  AvallenSolutions/earth-pulse --private --source . --push` — the permission classifier refuses
+  to let the agent run it. Then add a **VERCEL_TOKEN** repo secret (avallen-solutions scope) so
+  refresh-data.yml can deploy.
+- **Decide when to deploy** the Phase 7 work (live site is 8 commits behind main). Deploy flow:
+  `vercel deploy --prod --yes` then `vercel alias set <url> earth-pulse-alkatera.vercel.app`
+  (alias does NOT move automatically), Vercel team avallen-solutions.
+- Optional: say whether to include WRI Aqueduct futures in this session.
