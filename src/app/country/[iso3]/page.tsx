@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { LineChart } from "@/components/LineChart";
 import { ActionsCard } from "@/components/ActionsCard";
+import { Stripes } from "@/components/Stripes";
 import { accentFor } from "@/lib/colors";
 import {
   DOMAIN_LABELS,
@@ -235,6 +236,20 @@ export default async function CountryPage({
               );
             })}
           </div>
+        )}
+
+        {observedTemp && observedTemp.length > 1 && (
+          <section className="mt-6">
+            <Stripes
+              points={observedTemp}
+              label={`Warming stripes for ${country.name}, ${observedTemp[0][0]} to ${observedTemp[observedTemp.length - 1][0]}: each band is one year, blue cooler than the 1991-2020 average, red hotter`}
+            />
+            <p className="mt-1 text-xs text-[#898781]">
+              {country.name} in stripes: every year since{" "}
+              {observedTemp[0][0]}, blue cooler than the 1991-2020 average, red
+              hotter.
+            </p>
+          </section>
         )}
 
         {futures.length > 0 && observedTemp && (

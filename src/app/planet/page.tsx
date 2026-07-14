@@ -3,6 +3,8 @@ import { join } from "node:path";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { LineChart } from "@/components/LineChart";
+import { MoversPanel } from "@/components/MoversPanel";
+import { Stripes } from "@/components/Stripes";
 import { accentFor } from "@/lib/colors";
 import { formatValue, type Country, type Metric, type SeriesFile } from "@/lib/types";
 
@@ -81,6 +83,25 @@ export default function PlanetPage() {
           These are the big three: the ocean storing the heat, the sea rising,
           and the ice sheets losing mass.
         </p>
+
+        {(() => {
+          const worldTemp = load<SeriesFile>(
+            "series/temperature_anomaly.json"
+          )["WLD"];
+          return worldTemp && worldTemp.length > 1 ? (
+            <div className="mt-6">
+              <Stripes
+                points={worldTemp}
+                height={72}
+                label={`Warming stripes for the world, ${worldTemp[0][0]} to ${worldTemp[worldTemp.length - 1][0]}: each band is one year, blue cooler than the 1991-2020 average, red hotter`}
+              />
+              <p className="mt-1 text-xs text-[#898781]">
+                The world in stripes: every year since {worldTemp[0][0]}, blue
+                cooler than the 1991-2020 average, red hotter.
+              </p>
+            </div>
+          ) : null;
+        })()}
 
         <div className="mt-8 grid gap-6 sm:grid-cols-1">
           {charts.map(({ metric, iso3, points }) => {
@@ -166,6 +187,26 @@ export default function PlanetPage() {
             );
           })}
         </div>
+
+        {(() => {
+          const renewables = allMetrics.find(
+            (m) => m.id === "renewables_share_energy"
+          );
+          return renewables ? (
+            <section className="mt-10">
+              <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-[#898781]">
+                Biggest movers
+              </h2>
+              <div className="rounded-xl border border-white/10 bg-[#1a1a19] p-4">
+                <MoversPanel
+                  series={load<SeriesFile>("series/renewables_share_energy.json")}
+                  countries={countries.filter((c) => c.iso3 !== "WLD")}
+                  metric={renewables}
+                />
+              </div>
+            </section>
+          ) : null;
+        })()}
 
         {dataUpdatedLabel() && (
           <p className="mt-8 border-t border-white/10 pt-4 text-xs text-[#898781]">

@@ -12,6 +12,7 @@ import { VitalsStrip } from "./VitalsStrip";
 import { VitalsModal } from "./VitalsModal";
 import { EventTicker, type TickerItem } from "./EventTicker";
 import { Panel } from "./Panel";
+import { MoversPanel } from "./MoversPanel";
 import { EventPopup, type MapEvent } from "./EventPopup";
 
 /** Latest full GIBS imagery day (UTC yesterday). */
@@ -1404,8 +1405,8 @@ export function MapExplorer({
         {legendEl}
       </button>
 
-      {/* Live layers (desktop floating) */}
-      <div className="absolute right-4 top-16 z-10 hidden w-64 lg:block">
+      {/* Live layers + movers (desktop floating, stacked so expansion pushes down) */}
+      <div className="absolute right-4 top-16 z-10 hidden w-64 flex-col gap-2 lg:flex">
         <Panel
           title="Live layers"
           badge={
@@ -1419,6 +1420,11 @@ export function MapExplorer({
           defaultOpen={false}
         >
           {liveLayersBody}
+        </Panel>
+        <Panel title="Biggest movers" defaultOpen={false}>
+          <div className="max-h-[calc(100dvh-420px)] overflow-y-auto pr-1">
+            <MoversPanel series={series} countries={countries} metric={metric} />
+          </div>
         </Panel>
       </div>
 
@@ -1470,6 +1476,12 @@ export function MapExplorer({
                 {liveAsOf ? ` · as of ${fmtTime(liveAsOf)}` : ""}
               </div>
               {liveLayersBody}
+            </div>
+            <div className="border-t border-white/10 pt-3">
+              <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#898781]">
+                Biggest movers
+              </div>
+              <MoversPanel series={series} countries={countries} metric={metric} />
             </div>
             {dataUpdated && (
               <p className="pb-1 text-[11px] text-[#898781]">

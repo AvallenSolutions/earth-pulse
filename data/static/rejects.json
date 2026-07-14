@@ -1222,5 +1222,337 @@
   [
     "grapher_pm25-air-pollution:Upper-middle-income countries",
     "no ISO3 code"
+  ],
+  [
+    "grapher_per-capita-co2-aviation:Africa",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_per-capita-co2-aviation:Asia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_per-capita-co2-aviation:Europe",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_per-capita-co2-aviation:North America",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_per-capita-co2-aviation:Oceania",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_per-capita-co2-aviation:South America",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Africa (WHO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Americas (WHO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Australia and New Zealand (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Central and Southern Asia (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Eastern Mediterranean (WHO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Eastern and South-Eastern Asia (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Europe (WHO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Europe and Northern America (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:High-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Latin America and the Caribbean (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Low-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Lower-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Northern Africa and Western Asia (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Oceania (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:South-East Asia (WHO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Sub-Saharan Africa (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Upper-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-using-safely-managed-sanitation:Western Pacific (WHO)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_marine-protected-areas:East Asia and Pacific (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_marine-protected-areas:Europe and Central Asia (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_marine-protected-areas:European Union (27)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_marine-protected-areas:High-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_marine-protected-areas:Latin America and Caribbean (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_marine-protected-areas:Low-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_marine-protected-areas:Lower-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_marine-protected-areas:Middle East, North Africa, Afghanistan and Pakistan (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_marine-protected-areas:North America (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_marine-protected-areas:South Asia (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_marine-protected-areas:Sub-Saharan Africa (WB)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_marine-protected-areas:Upper-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_consumption-of-ozone-depleting-substances:Africa",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_consumption-of-ozone-depleting-substances:Asia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_consumption-of-ozone-depleting-substances:Europe",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_consumption-of-ozone-depleting-substances:European Union (28)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_consumption-of-ozone-depleting-substances:North America",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_consumption-of-ozone-depleting-substances:Oceania",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_consumption-of-ozone-depleting-substances:South America",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:(UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Africa",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Americas (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Asia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Australia and New Zealand (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Caribbean (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Central America (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Central Asia (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Central and Southern Asia (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Eastern Africa (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Eastern Asia (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Eastern and South-Eastern Asia (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Europe",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Europe and Northern America (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Europe, Northern America, Australia and New Zealand  (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:European Union (27)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:High-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Kosovo",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Latin America and the Caribbean (UN)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Low-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Lower-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Melanesia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Middle Africa (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Northern Africa (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Northern Africa and Western Asia (UN SDG)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Northern America (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Northern Europe (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Oceania",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Oceania (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Polynesia",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:South America (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:South-eastern Asia (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Southern Africa (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Southern Asia (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Southern Europe (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Sub-Saharan Africa (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Upper-middle-income countries",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Western Africa (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Western Asia (UN M49)",
+    "no ISO3 code"
+  ],
+  [
+    "grapher_share-of-population-urban:Western Europe (UN M49)",
+    "no ISO3 code"
   ]
 ]
