@@ -121,17 +121,27 @@ Full plan: ~/.claude/plans/please-write-a-plan-replicated-lantern.md
       updated X ago" in drawer + /planet footer (verified in browser at
       375/768/desktop)
 
-### 7.2 Metrics batch + stripes + movers
-- [ ] ~8 new registry metrics (consumption CO2, aviation, oil/gas electricity,
-      sanitation, marine protected areas, waste per person, air pollution deaths)
-- [ ] Stripes.tsx: warming stripes on country pages + /planet
-- [ ] MoversPanel.tsx: biggest improvers/worseners per metric
+### 7.2 Metrics batch + stripes + movers ✅ (14 Jul 2026)
+- [x] 8 new registry metrics: consumption CO2, aviation per person, oil
+      electricity, gas electricity, sanitation, marine protected areas,
+      ozone-depleting substances, urban population. (Air pollution deaths and
+      municipal waste REJECTED: OWID flags them non-redistributable, no CSV.)
+- [x] Stripes.tsx: warming stripes on country pages + /planet (verified: Brazil,
+      world)
+- [x] MoversPanel.tsx: biggest rises/falls per metric, neutral wording, on
+      /planet + desktop map column + drawer (verified with renewables + CO2 pp)
 
-### 7.3 Monthly resolution + month slider
-- [ ] ingest-monthly.ts: ERA5 monthly temp/precip per country (Open-Meteo),
-      NSIDC sea ice, NOAA CO2; monthly/<metric>/<year>.json = {iso3: [12]}
-- [ ] Month/Year granularity toggle on the map slider; month-aware
-      fetchChoropleth; play steps months
+### 7.3 Monthly resolution + month slider ✅ (14 Jul 2026)
+- [x] ingest-monthly.ts: observed ERA5 monthly per country via World Bank CCKP
+      (NOT Open-Meteo: CCKP gives proper country means, same portal as our
+      CMIP6 futures). temperature_anomaly (°C) + precip_anomaly (%) vs that
+      month's own 1991-2020 mean; 244 countries, 1950-2024, 2.9MB.
+      monthly/<metric>/<year>.json = {iso3: [12]}, plus index.json per metric.
+- [x] Month slider: self-discovering "Monthly" chip (index.json 404 = annual
+      only), month scrubbing, play steps months and holds at Dec of the final
+      year, monthly unit line. Verified: GBR Jul 2018 +1.98 / Feb 2018 -1.86
+      (Beast from the East), PAK Jul 2022 +156% (flood monsoon).
+- [ ] Later: NSIDC monthly sea ice + NOAA monthly CO2 (global series, /planet)
 
 ### 7.4 More futures to 2100
 - [ ] CCKP precipitation projections (extend ingest-projections.ts, delta method)

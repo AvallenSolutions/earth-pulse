@@ -73,8 +73,34 @@ function daysAgo(iso: string): string {
   return `${days} days ago`;
 }
 
+const MONTH_LABELS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+type MonthlyInfo = { firstYear: number; lastYear: number; unit: string };
+
 const choroplethCache = new Map<string, Record<string, number>>();
 const seriesCache = new Map<string, SeriesFile>();
+const monthlyCache = new Map<string, Record<string, (number | null)[]>>();
+const monthlyIndexCache = new Map<string, MonthlyInfo | null>();
+
+async function fetchMonthly(metric: string, year: number) {
+  const key = `${metric}/${year}`;
+  if (!monthlyCache.has(key)) {
+    const res = await fetch(`/data/monthly/${metric}/${year}.json`);
+    monthlyCache.set(key, res.ok ? await res.json() : {});
+  }
+  return monthlyCache.get(key)!;
+}
+
+async function fetchMonthlyIndex(metric: string): Promise<MonthlyInfo | null> {
+  if (!monthlyIndexCache.has(metric)) {
+    const res = await fetch(`/data/monthly/${metric}/index.json`);
+    monthlyIndexCache.set(metric, res.ok ? await res.json() : null);
+  }
+  return monthlyIndexCache.get(metric)!;
+}
 
 async function fetchChoropleth(
   metric: string,
@@ -141,6 +167,10 @@ export function MapExplorer({
       : "ssp245"
   );
   const [playing, setPlaying] = useState(false);
+  const [monthlyInfo, setMonthlyInfo] = useState<MonthlyInfo | null>(null);
+  const [monthMode, setMonthMode] = useState(false);
+  const [month, setMonth] = useState(6);
+  const yearRef = useRef(0);
   const [hover, setHover] = useState<Hover | null>(null);
   const [popup, setPopup] = useState<
     { event: MapEvent; left: number; top: number } | null
@@ -400,18 +430,51 @@ export function MapExplorer({
     };
   }, [metric]);
 
+  useEffect(() => {
+    yearRef.current = year;
+  }, [year]);
+
+  // Does this metric have a monthly-resolution dataset? (self-discovering:
+  // the ingest writes an index.json; a 404 simply means annual only)
+  useEffect(() => {
+    let alive = true;
+    fetchMonthlyIndex(metric.id).then((info) => {
+      if (!alive) return;
+      setMonthlyInfo(info);
+      if (!info) setMonthMode(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [metric]);
+
   // Paint the choropleth whenever metric/year changes
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     let alive = true;
     const isProjected = !!PROJECTIONS[metric.id] && year > metric.lastYear;
+    const inMonthMode =
+      monthMode &&
+      !!monthlyInfo &&
+      year >= monthlyInfo.firstYear &&
+      year <= monthlyInfo.lastYear;
     (async () => {
-      const values = await fetchChoropleth(
-        metric.id,
-        year,
-        isProjected ? scenario : undefined
-      );
+      let values: Record<string, number>;
+      if (inMonthMode) {
+        const monthly = await fetchMonthly(metric.id, year);
+        values = {};
+        for (const [iso3, arr] of Object.entries(monthly)) {
+          const v = arr[month];
+          if (v !== null && v !== undefined) values[iso3] = v;
+        }
+      } else {
+        values = await fetchChoropleth(
+          metric.id,
+          year,
+          isProjected ? scenario : undefined
+        );
+      }
       if (!alive) return;
       valuesRef.current = values;
       const painted = paintedIso.current;
@@ -440,7 +503,7 @@ export function MapExplorer({
     return () => {
       alive = false;
     };
-  }, [metric, year, scenario, mapReady]);
+  }, [metric, year, scenario, mapReady, monthMode, month, monthlyInfo]);
 
   // Satellite imagery layer (NASA GIBS, keyless). Sits beneath the country
   // fills; the choropleth hides while imagery is on but hover/click stay live.
@@ -1089,9 +1152,24 @@ export function MapExplorer({
     };
   }, [mapReady, globeOn, playing, popup]);
 
-  // Play/animate the timeline (plays through into the projected years)
+  // Play/animate the timeline (plays through into the projected years).
+  // In month mode it steps month by month instead.
   useEffect(() => {
     if (!playing) return;
+    if (monthMode && monthlyInfo) {
+      const t = setInterval(() => {
+        setMonth((m) => {
+          if (m < 11) return m + 1;
+          if (yearRef.current >= monthlyInfo.lastYear) {
+            setPlaying(false);
+            return m; // hold at December of the final year
+          }
+          setYear((y) => y + 1);
+          return 0;
+        });
+      }, 140);
+      return () => clearInterval(t);
+    }
     const playLast = PROJECTIONS[metric.id]?.lastYear ?? metric.lastYear;
     const t = setInterval(() => {
       setYear((y) => {
@@ -1103,10 +1181,15 @@ export function MapExplorer({
       });
     }, 180);
     return () => clearInterval(t);
-  }, [playing, metric]);
+  }, [playing, metric, monthMode, monthlyInfo]);
 
   // Prefetch nearby years so scrubbing is smooth
   useEffect(() => {
+    if (monthMode && monthlyInfo) {
+      // months live 12-to-a-file; the next year's file is all we need ahead
+      if (year + 1 <= monthlyInfo.lastYear) fetchMonthly(metric.id, year + 1);
+      return;
+    }
     const projLast = PROJECTIONS[metric.id]?.lastYear ?? metric.lastYear;
     for (let y = year + 1; y <= Math.min(year + 5, projLast); y++) {
       fetchChoropleth(
@@ -1127,7 +1210,7 @@ export function MapExplorer({
           .then((r) => (r.ok ? r.json().then((j) => disHistCache.set(y, j)) : undefined))
           .catch(() => {});
     }
-  }, [metric, year, scenario, stormsOn, quakeHistOn, disHistOn]);
+  }, [metric, year, scenario, stormsOn, quakeHistOn, disHistOn, monthMode, monthlyInfo]);
 
   const domains = [...new Set(metrics.map((m) => m.domain))];
   const sliderMin = metric.firstYear;
@@ -1526,7 +1609,16 @@ export function MapExplorer({
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
-              if (!playing && year >= metric.lastYear) setYear(sliderMin);
+              if (!playing) {
+                if (monthMode && monthlyInfo) {
+                  if (year >= monthlyInfo.lastYear && month >= 11) {
+                    setYear(monthlyInfo.firstYear);
+                    setMonth(0);
+                  }
+                } else if (year >= metric.lastYear) {
+                  setYear(sliderMin);
+                }
+              }
               setPlaying((p) => !p);
             }}
             aria-label={playing ? "Pause" : "Play"}
@@ -1544,19 +1636,36 @@ export function MapExplorer({
             )}
           </button>
           <div className="relative w-full">
-            <input
-              type="range"
-              min={sliderMin}
-              max={sliderMax}
-              value={year}
-              onChange={(e) => {
-                setPlaying(false);
-                setYear(Number(e.target.value));
-              }}
-              className="ep-slider w-full"
-              aria-label="Year"
-            />
-            {projection && (
+            {monthMode && monthlyInfo ? (
+              <input
+                type="range"
+                min={monthlyInfo.firstYear * 12}
+                max={monthlyInfo.lastYear * 12 + 11}
+                value={year * 12 + month}
+                onChange={(e) => {
+                  setPlaying(false);
+                  const v = Number(e.target.value);
+                  setYear(Math.floor(v / 12));
+                  setMonth(v % 12);
+                }}
+                className="ep-slider w-full"
+                aria-label="Month"
+              />
+            ) : (
+              <input
+                type="range"
+                min={sliderMin}
+                max={sliderMax}
+                value={year}
+                onChange={(e) => {
+                  setPlaying(false);
+                  setYear(Number(e.target.value));
+                }}
+                className="ep-slider w-full"
+                aria-label="Year"
+              />
+            )}
+            {projection && !monthMode && (
               <div
                 className="pointer-events-none absolute top-1/2 h-3.5 w-px -translate-y-1/2 bg-white/40"
                 style={{
@@ -1566,12 +1675,35 @@ export function MapExplorer({
               />
             )}
           </div>
-          <div className="w-16 shrink-0 text-right">
+          {monthlyInfo && (
+            <button
+              onClick={() => {
+                setPlaying(false);
+                if (!monthMode) {
+                  // entering month mode: clamp the year into the monthly range
+                  setYear((y) =>
+                    Math.min(Math.max(y, monthlyInfo.firstYear), monthlyInfo.lastYear)
+                  );
+                }
+                setMonthMode((m) => !m);
+              }}
+              aria-pressed={monthMode}
+              title="Switch between yearly and monthly resolution"
+              className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] transition-colors ${
+                monthMode
+                  ? "border-white/30 bg-white/10 text-white"
+                  : "border-white/10 text-[#898781] hover:text-[#c3c2b7]"
+              }`}
+            >
+              Monthly
+            </button>
+          )}
+          <div className={`${monthMode ? "w-20" : "w-16"} shrink-0 text-right`}>
             <div
-              className="text-lg font-semibold tabular-nums"
+              className={`${monthMode ? "text-sm leading-7" : "text-lg"} font-semibold tabular-nums`}
               style={{ color: isProjectedYear ? scenarioMeta.colour : "#ffffff" }}
             >
-              {year}
+              {monthMode ? `${MONTH_LABELS[month]} ${year}` : year}
             </div>
             {isProjectedYear && (
               <div className="-mt-1 text-[9px] uppercase tracking-wide text-[#898781]">
@@ -1581,8 +1713,10 @@ export function MapExplorer({
           </div>
         </div>
         <div className="mt-1 flex items-center justify-between text-[10px] tabular-nums text-[#898781]">
-          <span>{sliderMin}</span>
-          {projection ? (
+          <span>{monthMode && monthlyInfo ? monthlyInfo.firstYear : sliderMin}</span>
+          {monthMode && monthlyInfo ? (
+            <span>{monthlyInfo.unit}</span>
+          ) : projection ? (
             <span className="flex items-center gap-2">
               <span className="hidden sm:inline">‹ observed to {metric.lastYear}</span>
               <span className="flex gap-1">
@@ -1614,7 +1748,7 @@ export function MapExplorer({
           ) : (
             <span>{metric.unit}</span>
           )}
-          <span>{sliderMax}</span>
+          <span>{monthMode && monthlyInfo ? monthlyInfo.lastYear : sliderMax}</span>
         </div>
       </div>
 
