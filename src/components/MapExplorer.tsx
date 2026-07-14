@@ -360,7 +360,14 @@ export function MapExplorer({
     mapRef.current = map;
     if (process.env.NODE_ENV === "development")
       (window as unknown as { __map?: maplibregl.Map }).__map = map;
+
+    // On iOS/iPadOS, switching away and back can leave the WebGL canvas black.
+    // Triggering a repaint on visibility restore recovers it without a full reload.
+    const onVisible = () => { if (!document.hidden) map.triggerRepaint(); };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
+      document.removeEventListener("visibilitychange", onVisible);
       map.remove();
       mapRef.current = null;
     };
@@ -1363,7 +1370,7 @@ export function MapExplorer({
       {mobileMenuOpen && (
         <div className="absolute inset-0 z-40 lg:hidden" role="dialog" aria-modal="true">
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60"
             onClick={() => setMobileMenuOpen(false)}
           />
           <div className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm flex-col gap-4 overflow-y-auto border-r border-white/10 bg-[#0d0d0d] p-4">
