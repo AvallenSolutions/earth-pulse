@@ -32,6 +32,26 @@ export type MapEvent =
       from: string;
       to: string;
       eventid: number;
+    }
+  | {
+      kind: "hurricane";
+      name: string;
+      classification: string;
+      intensity: number;
+      pressure: number;
+      movementDir: number | null;
+      movementSpeed: number | null;
+      lastUpdate: string;
+      url: string;
+    }
+  | {
+      kind: "volcano";
+      name: string;
+      vei: number | null;
+      start: string;
+      end: string | null;
+      ongoing: boolean;
+      number: number;
     };
 
 const CAT_LABELS = [
@@ -52,6 +72,27 @@ const TYPE_LABELS: Record<string, string> = {
   VO: "Volcano",
   WF: "Wildfire",
 };
+
+const NHC_CLASS: Record<string, string> = {
+  TD: "Tropical depression",
+  STD: "Subtropical depression",
+  TS: "Tropical storm",
+  STS: "Subtropical storm",
+  HU: "Hurricane",
+  TY: "Typhoon",
+  PTC: "Post-tropical cyclone",
+  PC: "Potential tropical cyclone",
+};
+
+const COMPASS = [
+  "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+  "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
+];
+
+function heading(deg: number | null): string {
+  if (deg === null) return "";
+  return COMPASS[Math.round(deg / 22.5) % 16];
+}
 
 const LEVEL_COLOURS: Record<string, string> = {
   Red: "#e34948",
@@ -167,6 +208,92 @@ export function EventPopup({
             </a>
             <a
               href={newsUrl(`M${event.mag.toFixed(1)} earthquake ${event.place}`)}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[#6da7ec] hover:underline"
+            >
+              News coverage →
+            </a>
+          </div>
+        </>
+      ) : event.kind === "hurricane" ? (
+        <>
+          <div className="pr-6 text-sm font-semibold text-white">
+            {NHC_CLASS[event.classification] ?? "Storm"} {event.name}
+          </div>
+          <dl className="mt-2 space-y-1 text-xs text-[#898781]">
+            <div className="flex justify-between">
+              <dt>Max winds</dt>
+              <dd className="tabular-nums text-[#c3c2b7]">
+                {event.intensity} kt ({Math.round(event.intensity * 1.852)} km/h)
+              </dd>
+            </div>
+            {event.pressure > 0 && (
+              <div className="flex justify-between">
+                <dt>Pressure</dt>
+                <dd className="tabular-nums text-[#c3c2b7]">
+                  {event.pressure} mb
+                </dd>
+              </div>
+            )}
+            {event.movementSpeed !== null && (
+              <div className="flex justify-between">
+                <dt>Moving</dt>
+                <dd className="tabular-nums text-[#c3c2b7]">
+                  {heading(event.movementDir)} at {event.movementSpeed} mph
+                </dd>
+              </div>
+            )}
+          </dl>
+          <div className="mt-3 flex flex-col gap-1.5 border-t border-white/10 pt-2.5 text-xs">
+            <a
+              href={event.url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[#6da7ec] hover:underline"
+            >
+              NHC public advisory →
+            </a>
+          </div>
+        </>
+      ) : event.kind === "volcano" ? (
+        <>
+          <div className="flex items-center gap-2 pr-6">
+            <span className="rounded-full bg-[#e34948] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+              {event.ongoing ? "Erupting" : "Recent eruption"}
+            </span>
+          </div>
+          <div className="mt-1.5 text-sm font-semibold text-white">
+            {event.name}
+          </div>
+          <dl className="mt-2 space-y-1 text-xs text-[#898781]">
+            <div className="flex justify-between">
+              <dt>{event.ongoing ? "Started" : "Erupted"}</dt>
+              <dd className="tabular-nums text-[#c3c2b7]">
+                {event.start}
+                {!event.ongoing && event.end && event.end !== event.start
+                  ? ` → ${event.end}`
+                  : ""}
+              </dd>
+            </div>
+            {event.vei !== null && (
+              <div className="flex justify-between">
+                <dt>Explosivity (VEI)</dt>
+                <dd className="tabular-nums text-[#c3c2b7]">{event.vei}</dd>
+              </div>
+            )}
+          </dl>
+          <div className="mt-3 flex flex-col gap-1.5 border-t border-white/10 pt-2.5 text-xs">
+            <a
+              href={`https://volcano.si.edu/volcano.cfm?vn=${event.number}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[#6da7ec] hover:underline"
+            >
+              Smithsonian GVP profile →
+            </a>
+            <a
+              href={newsUrl(`${event.name} volcano eruption`)}
               target="_blank"
               rel="noreferrer"
               className="text-[#6da7ec] hover:underline"

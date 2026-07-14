@@ -42,3 +42,13 @@ Corrections and patterns to remember for this project. Reviewed at session start
   repaint is the reliable verification, not the query APIs.
 - **Track lines crossing the antimeridian must use unwrapped longitudes**
   (continue past ±180), or MapLibre draws a straight band around the planet.
+- **In-app Browser downscales screenshots to ~800px** when the viewport is
+  wider, and click coordinates then map to neither screenshot nor viewport
+  pixels reliably. To click small map features (event dots), resize_window to
+  width <=800 (e.g. 760) so canvas width == screenshot width, then click the
+  map.project() canvas pixel directly. Cost me a long detour in Phase 7.5.
+- **A long-lived reused Browser tab accumulates HMR patches** that corrupt
+  React hook dependency arrays ("The final argument passed to useEffect
+  changed size between renders"), which silently breaks the map init effect
+  (click handlers never register). A production build never sees this. For a
+  clean verify, open a FRESH tab (tabs_create) rather than reusing the seed tab.

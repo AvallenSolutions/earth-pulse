@@ -186,6 +186,10 @@ export function MapExplorer({
   const [airOn, setAirOn] = useState(false);
   const [quakesOn, setQuakesOn] = useState(false);
   const [disastersOn, setDisastersOn] = useState(false);
+  const [hurricanesOn, setHurricanesOn] = useState(false);
+  const [volcanoesOn, setVolcanoesOn] = useState(false);
+  const [auroraOn, setAuroraOn] = useState(false);
+  const [hurricaneCount, setHurricaneCount] = useState<number | null>(null);
   const [stormsOn, setStormsOn] = useState(false);
   const [stormCats, setStormCats] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
   const stormCatsRef = useRef(stormCats);
@@ -389,7 +393,35 @@ export function MapExplorer({
         year: Number(p.year),
       });
     });
-    for (const layer of ["quakes", "disasters", "storms", "quakehist", "dishist"]) {
+    map.on("click", "hurricanes", (e) => {
+      const p = e.features?.[0]?.properties;
+      if (!p) return;
+      popupAt(e, {
+        kind: "hurricane",
+        name: String(p.name),
+        classification: String(p.classification),
+        intensity: Number(p.intensity),
+        pressure: Number(p.pressure),
+        movementDir: p.movementDir === null || p.movementDir === undefined ? null : Number(p.movementDir),
+        movementSpeed: p.movementSpeed === null || p.movementSpeed === undefined ? null : Number(p.movementSpeed),
+        lastUpdate: String(p.lastUpdate ?? ""),
+        url: String(p.url ?? ""),
+      });
+    });
+    map.on("click", "volcanoes", (e) => {
+      const p = e.features?.[0]?.properties;
+      if (!p) return;
+      popupAt(e, {
+        kind: "volcano",
+        name: String(p.name),
+        vei: p.vei === null || p.vei === undefined ? null : Number(p.vei),
+        start: String(p.start ?? ""),
+        end: p.end === null || p.end === undefined ? null : String(p.end),
+        ongoing: Boolean(p.ongoing),
+        number: Number(p.number),
+      });
+    });
+    for (const layer of ["quakes", "disasters", "storms", "quakehist", "dishist", "hurricanes", "volcanoes"]) {
       map.on("mouseenter", layer, () => {
         map.getCanvas().style.cursor = "pointer";
       });
@@ -398,7 +430,7 @@ export function MapExplorer({
       // event dots sit above countries; don't navigate through them
       const hits = map
         .queryRenderedFeatures(e.point, {
-          layers: ["quakes", "disasters", "storms", "quakehist", "dishist"].filter((l) => map.getLayer(l)),
+          layers: ["quakes", "disasters", "storms", "quakehist", "dishist", "hurricanes", "volcanoes"].filter((l) => map.getLayer(l)),
         })
         .length;
       if (hits > 0) return;
@@ -1044,6 +1076,224 @@ export function MapExplorer({
     };
   }, [airOn, mapReady]);
 
+  // Active tropical cyclones (NHC). Current position + strength; polls every
+  // 15 min. The feed is empty out of season, so the layer simply shows nothing.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    let alive = true;
+    if (!hurricanesOn) {
+      if (map.getLayer("hurricanes")) map.removeLayer("hurricanes");
+      if (map.getLayer("hurricanes-ring")) map.removeLayer("hurricanes-ring");
+      if (map.getSource("hurricanes")) map.removeSource("hurricanes");
+      return;
+    }
+    const load = async () => {
+      try {
+        const res = await fetch("/api/hurricanes");
+        if (!res.ok) throw new Error(String(res.status));
+        const { storms } = (await res.json()) as {
+          storms: {
+            lon: number; lat: number; name: string; classification: string;
+            intensity: number; pressure: number; movementDir: number | null;
+            movementSpeed: number | null; lastUpdate: string; url: string;
+          }[];
+        };
+        if (!alive || !mapRef.current) return;
+        if (alive) setHurricaneCount(storms.length);
+        const geojson = {
+          type: "FeatureCollection" as const,
+          features: storms.map((s) => ({
+            type: "Feature" as const,
+            properties: s,
+            geometry: { type: "Point" as const, coordinates: [s.lon, s.lat] },
+          })),
+        };
+        const src = map.getSource("hurricanes") as maplibregl.GeoJSONSource | undefined;
+        if (src) {
+          src.setData(geojson);
+          return;
+        }
+        map.addSource("hurricanes", {
+          type: "geojson",
+          data: geojson,
+          attribution: 'Storms: <a href="https://www.nhc.noaa.gov">NOAA NHC</a>',
+        });
+        // Soft ring underneath reads as the storm's reach
+        map.addLayer({
+          id: "hurricanes-ring",
+          type: "circle",
+          source: "hurricanes",
+          paint: {
+            "circle-radius": ["interpolate", ["linear"], ["get", "intensity"], 30, 10, 130, 26],
+            "circle-color": "#6da7ec",
+            "circle-opacity": 0.18,
+            "circle-blur": 0.6,
+          },
+        });
+        map.addLayer({
+          id: "hurricanes",
+          type: "circle",
+          source: "hurricanes",
+          paint: {
+            "circle-radius": ["interpolate", ["linear"], ["get", "intensity"], 30, 4, 130, 9],
+            "circle-color": [
+              "step", ["get", "intensity"],
+              "#6da7ec", 64, "#e0a355", 96, "#f0502a", 113, "#e01515",
+            ],
+            "circle-opacity": 0.95,
+            "circle-stroke-color": "#ffffff",
+            "circle-stroke-width": 1,
+          },
+        });
+      } catch {
+        /* feed unavailable */
+      }
+    };
+    load();
+    const timer = setInterval(() => {
+      if (!document.hidden) load();
+    }, 900_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [hurricanesOn, mapReady]);
+
+  // Recent and ongoing volcanic activity (Smithsonian GVP). Polls every 6h.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    let alive = true;
+    if (!volcanoesOn) {
+      if (map.getLayer("volcanoes")) map.removeLayer("volcanoes");
+      if (map.getSource("volcanoes")) map.removeSource("volcanoes");
+      return;
+    }
+    const load = async () => {
+      try {
+        const res = await fetch("/api/volcanoes");
+        if (!res.ok) throw new Error(String(res.status));
+        const { volcanoes } = (await res.json()) as {
+          volcanoes: {
+            lon: number; lat: number; name: string; vei: number | null;
+            start: string; end: string | null; ongoing: boolean; number: number;
+          }[];
+        };
+        if (!alive || !mapRef.current) return;
+        const geojson = {
+          type: "FeatureCollection" as const,
+          features: volcanoes.map((v) => ({
+            type: "Feature" as const,
+            properties: { ...v, ongoing: v.ongoing ? 1 : 0 },
+            geometry: { type: "Point" as const, coordinates: [v.lon, v.lat] },
+          })),
+        };
+        const src = map.getSource("volcanoes") as maplibregl.GeoJSONSource | undefined;
+        if (src) {
+          src.setData(geojson);
+          return;
+        }
+        map.addSource("volcanoes", {
+          type: "geojson",
+          data: geojson,
+          attribution: 'Volcanoes: <a href="https://volcano.si.edu">Smithsonian GVP</a>',
+        });
+        map.addLayer({
+          id: "volcanoes",
+          type: "circle",
+          source: "volcanoes",
+          paint: {
+            // ongoing eruptions burn brighter and larger than recent ones
+            "circle-radius": ["case", ["==", ["get", "ongoing"], 1], 6, 4],
+            "circle-color": ["case", ["==", ["get", "ongoing"], 1], "#ff5a36", "#c2612e"],
+            "circle-opacity": 0.9,
+            "circle-stroke-color": "#1a0d08",
+            "circle-stroke-width": 0.75,
+          },
+        });
+      } catch {
+        /* feed unavailable */
+      }
+    };
+    load();
+    const timer = setInterval(() => {
+      if (!document.hidden) load();
+    }, 21_600_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [volcanoesOn, mapReady]);
+
+  // Aurora forecast oval (NOAA SWPC OVATION). A heatmap glow near the poles;
+  // polls every 30 min.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    let alive = true;
+    if (!auroraOn) {
+      if (map.getLayer("aurora")) map.removeLayer("aurora");
+      if (map.getSource("aurora")) map.removeSource("aurora");
+      return;
+    }
+    const load = async () => {
+      try {
+        const res = await fetch("/api/aurora");
+        if (!res.ok) throw new Error(String(res.status));
+        const { points } = (await res.json()) as { points: [number, number, number][] };
+        if (!alive || !mapRef.current) return;
+        const geojson = {
+          type: "FeatureCollection" as const,
+          features: points.map(([lon, lat, prob]) => ({
+            type: "Feature" as const,
+            properties: { prob },
+            geometry: { type: "Point" as const, coordinates: [lon, lat] },
+          })),
+        };
+        const src = map.getSource("aurora") as maplibregl.GeoJSONSource | undefined;
+        if (src) {
+          src.setData(geojson);
+          return;
+        }
+        map.addSource("aurora", {
+          type: "geojson",
+          data: geojson,
+          attribution: 'Aurora: <a href="https://www.swpc.noaa.gov">NOAA SWPC</a>',
+        });
+        map.addLayer({
+          id: "aurora",
+          type: "heatmap",
+          source: "aurora",
+          paint: {
+            "heatmap-weight": ["interpolate", ["linear"], ["get", "prob"], 5, 0.15, 90, 1],
+            "heatmap-intensity": 0.9,
+            "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 1, 8, 5, 34],
+            "heatmap-opacity": 0.65,
+            "heatmap-color": [
+              "interpolate", ["linear"], ["heatmap-density"],
+              0, "rgba(0,0,0,0)",
+              0.2, "rgba(30,120,90,0.35)",
+              0.5, "rgba(45,190,120,0.6)",
+              0.8, "rgba(120,240,170,0.8)",
+              1, "rgba(200,255,220,0.95)",
+            ],
+          },
+        });
+      } catch {
+        /* feed unavailable */
+      }
+    };
+    load();
+    const timer = setInterval(() => {
+      if (!document.hidden) load();
+    }, 1_800_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [auroraOn, mapReady]);
+
   // Live event ticker: the biggest things happening on Earth right now.
   // Refetches every 2 minutes so an open tab stays a genuine live feed.
   useEffect(() => {
@@ -1222,7 +1472,7 @@ export function MapExplorer({
 
   const legendColours = rampColours(metric.scaleType, metric.ramp);
   const accent = accentFor(metric.scaleType, metric.ramp);
-  const liveCount = [satOn, firesOn, floodsOn, airOn, quakesOn, disastersOn, stormsOn, quakeHistOn, disHistOn].filter(Boolean).length;
+  const liveCount = [satOn, firesOn, floodsOn, airOn, quakesOn, disastersOn, hurricanesOn, volcanoesOn, auroraOn, stormsOn, quakeHistOn, disHistOn].filter(Boolean).length;
   const legendEl = (
     <div>
       <div className="mb-1 truncate text-sm font-medium text-white">
@@ -1303,6 +1553,41 @@ export function MapExplorer({
             { label: "volcano", colour: "#e34948" },
           ]}
         />
+      )}
+      <LayerRow
+        label={
+          hurricanesOn && hurricaneCount !== null
+            ? `Hurricanes${hurricaneCount ? ` · ${hurricaneCount} active` : " · none active"}`
+            : "Hurricanes (live)"
+        }
+        dot="#6da7ec"
+        checked={hurricanesOn}
+        onChange={setHurricanesOn}
+      />
+      {hurricanesOn && (
+        <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+          Active tropical cyclones from NOAA NHC. Empty outside storm season.
+        </p>
+      )}
+      <LayerRow label="Volcanic activity" dot="#ff5a36" checked={volcanoesOn} onChange={setVolcanoesOn} />
+      {volcanoesOn && (
+        <>
+          <LegendRow
+            items={[
+              { label: "erupting now", colour: "#ff5a36" },
+              { label: "recent", colour: "#c2612e" },
+            ]}
+          />
+          <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+            Smithsonian GVP: eruptions in the last ~2 years and ongoing.
+          </p>
+        </>
+      )}
+      <LayerRow label="Aurora forecast" dot="#2dbe78" checked={auroraOn} onChange={setAuroraOn} />
+      {auroraOn && (
+        <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+          NOAA SWPC OVATION: the chance of visible aurora over the next hour.
+        </p>
       )}
       <div className="mt-2 border-t border-white/10 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
         History · follows the year slider

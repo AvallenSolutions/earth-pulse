@@ -154,10 +154,18 @@ Full plan: ~/.claude/plans/please-write-a-plan-replicated-lantern.md
 - [ ] WRI Aqueduct water stress 2030/50/80: needs source discovery for the
       country-level futures CSV (ingest-aqueduct.ts, slider snaps to horizons)
 
-### 7.5 New live layers
-- [ ] /api/hurricanes: NOAA NHC forecast cones + tracks (15 min cache)
-- [ ] /api/volcanoes: Smithsonian GVP weekly (6 h cache)
-- [ ] /api/aurora: NOAA SWPC OVATION oval (30 min cache)
+### 7.5 New live layers ✅ (14 Jul 2026)
+- [x] /api/aurora: NOAA SWPC OVATION oval (30 min cache); heatmap glow near
+      the poles. Verified: green aurora oval across the Arctic.
+- [x] /api/volcanoes: Smithsonian GVP recent+ongoing eruptions (6 h cache);
+      circle layer, erupting-now vs recent styling, popup with VEI + dates +
+      GVP link. Verified: full Ring of Fire renders; Marapi popup (ERUPTING,
+      VEI 2, started 2023-12-03).
+- [x] /api/hurricanes: NHC active storms (15 min cache); current position +
+      strength + movement, popup with advisory link, graceful empty out of
+      season (verified 0 storms in July). Forecast CONE/track deferred: NHC
+      only ships those as shapefile/KMZ zips, disproportionate for a free-tier
+      proxy; documented in the route.
 
 ### 7.6 Story mode + animated events
 - [ ] stories.ts + StoryPlayer.tsx: guided tours (CO2 since 1750, century of

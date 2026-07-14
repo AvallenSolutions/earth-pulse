@@ -18,10 +18,20 @@ Updated: 2026-07-14 14:00 | Branch: main | Worktree: main (~/Documents/GitHub/ea
   (ingest-projections.ts now variable-generic, tas+pr), IPCC AR6 Table 9.9
   sea level fan on /planet (curated JSON, cross-checked vs IPCC exec summary
   + EEA). Remaining: WRI Aqueduct water stress futures (source discovery).
-- NEXT: 7.5 live layers (NHC hurricane cones, GVP volcanoes, SWPC aurora),
-  7.6 story mode + animated events, Aqueduct. Not deployed; deploy needs Tim.
-- public/data now ~31MB (was 20MB): 8 metrics + monthly (2.9MB) + pr
-  projections (3MB). Fine for the repo and Vercel.
+- 7.5 DONE (this session): three live layers — aurora (SWPC OVATION heatmap),
+  volcanoes (GVP recent+ongoing, popups), hurricanes (NHC active storms, empty
+  out of season). Hurricane forecast cone deferred (NHC ships it only as
+  shapefile zips). All verified in a fresh browser tab (Marapi popup, Arctic
+  aurora glow, Ring of Fire).
+- NEXT: 7.6 story mode + animated events, WRI Aqueduct water stress futures.
+  Not deployed; deploy needs Tim.
+- public/data now ~31MB. Fine for the repo and Vercel.
+- BROWSER-VERIFY GOTCHA (new, add to lessons): the in-app browser downscales
+  screenshots to ~800px when the viewport is wider, and click coordinates then
+  don't map to screenshot pixels. Set the viewport width <=800 (resize_window
+  width 760) so canvas==screenshot 1:1 before clicking small map features.
+  Also: a long-lived reused tab accumulates HMR patches that corrupt hook dep
+  arrays ("dependency array size changed"); open a FRESH tab for clean verify.
 
 ## Goal
 A free, public awareness dashboard for global climate/environment data: an interactive world
