@@ -14,9 +14,14 @@ Updated: 2026-07-14 14:00 | Branch: main | Worktree: main (~/Documents/GitHub/ea
 - 7.3 DONE (fd46c3b): ingest-monthly.ts (CCKP ERA5 observed, NOT Open-Meteo),
   monthly temp/precip anomalies 1950-2024, Monthly toggle + month play on the
   map slider. Verified: GBR 2018 heatwave/BftE, PAK Jul 2022 +156%.
-- NEXT: 7.4 futures (CCKP pr projections, Aqueduct water stress, IPCC sea
-  level fan on /planet), 7.5 live layers (NHC cones, GVP volcanoes, SWPC
-  aurora), 7.6 story mode + animated events. Not deployed; deploy needs Tim.
+- 7.4 MOSTLY DONE (c146dc5): precipitation projections to 2100 on the map
+  (ingest-projections.ts now variable-generic, tas+pr), IPCC AR6 Table 9.9
+  sea level fan on /planet (curated JSON, cross-checked vs IPCC exec summary
+  + EEA). Remaining: WRI Aqueduct water stress futures (source discovery).
+- NEXT: 7.5 live layers (NHC hurricane cones, GVP volcanoes, SWPC aurora),
+  7.6 story mode + animated events, Aqueduct. Not deployed; deploy needs Tim.
+- public/data now ~31MB (was 20MB): 8 metrics + monthly (2.9MB) + pr
+  projections (3MB). Fine for the repo and Vercel.
 
 ## Goal
 A free, public awareness dashboard for global climate/environment data: an interactive world
