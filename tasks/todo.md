@@ -103,6 +103,51 @@ Full plan: [PLAN.md](../PLAN.md).
       no credible free per-country source for forest loss/Red List/PM2.5
 - [ ] DEPLOY: awaiting Tim's express permission
 
+## Phase 7 — Next level of data + 5 improvements (approved 14 Jul 2026)
+Full plan: ~/.claude/plans/please-write-a-plan-replicated-lantern.md
+
+### 7.1 Always-fresh data (foundation)
+- [ ] Create GitHub repo (AvallenSolutions/earth-pulse, private) and push —
+      BLOCKED on Tim: permission classifier stops the agent running
+      `gh repo create AvallenSolutions/earth-pulse --private --source . --push`
+- [ ] Tim: add VERCEL_TOKEN secret to the repo once it exists
+- [x] Weekly refresh cron: .github/workflows/refresh-data.yml (ingest, commit,
+      deploy via Vercel CLI + alias move; org/project IDs baked in)
+- [x] Client polling in MapExplorer: ticker + quakes 2 min, disasters 10 min,
+      air 30 min; visibility-aware (verified: poll fires when visible,
+      suppressed when document.hidden)
+- [x] Freshness stamps: freshness.json written by all 5 ingest scripts;
+      "as of HH:MM" on Live layers (drawer + desktop badge); "Historical data
+      updated X ago" in drawer + /planet footer (verified in browser at
+      375/768/desktop)
+
+### 7.2 Metrics batch + stripes + movers
+- [ ] ~8 new registry metrics (consumption CO2, aviation, oil/gas electricity,
+      sanitation, marine protected areas, waste per person, air pollution deaths)
+- [ ] Stripes.tsx: warming stripes on country pages + /planet
+- [ ] MoversPanel.tsx: biggest improvers/worseners per metric
+
+### 7.3 Monthly resolution + month slider
+- [ ] ingest-monthly.ts: ERA5 monthly temp/precip per country (Open-Meteo),
+      NSIDC sea ice, NOAA CO2; monthly/<metric>/<year>.json = {iso3: [12]}
+- [ ] Month/Year granularity toggle on the map slider; month-aware
+      fetchChoropleth; play steps months
+
+### 7.4 More futures to 2100
+- [ ] CCKP precipitation projections (extend ingest-projections.ts, delta method)
+- [ ] WRI Aqueduct water stress 2030/50/80 (ingest-aqueduct.ts, snap slider)
+- [ ] IPCC AR6 sea level fan chart on /planet
+
+### 7.5 New live layers
+- [ ] /api/hurricanes: NOAA NHC forecast cones + tracks (15 min cache)
+- [ ] /api/volcanoes: Smithsonian GVP weekly (6 h cache)
+- [ ] /api/aurora: NOAA SWPC OVATION oval (30 min cache)
+
+### 7.6 Story mode + animated events
+- [ ] stories.ts + StoryPlayer.tsx: guided tours (CO2 since 1750, century of
+      storms, three futures); ?story= deep links; reduced-motion safe
+- [ ] Animated events: storm tracks draw themselves, quake pulse, fires glow
+
 ## Review
 - Phases 0-5 built and launched 13 Jul 2026. Decisions along the way:
   - No basemap tiles: flat Natural Earth boundaries on a dark surface. Zero

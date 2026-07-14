@@ -18,6 +18,7 @@
  * Run: npx tsx scripts/ingest-projections.ts
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { markFresh } from "./lib/freshness";
 
 const SCENARIOS = ["ssp126", "ssp245", "ssp585"];
 const FIRST_PROJ_YEAR = 2026;
@@ -145,6 +146,7 @@ async function main() {
         "Delta method: modelled change vs the ensemble's 2015-2024 mean, added to the observed ERA5 anomaly mean for 2015-2024 (baseline 1991-2020).",
     })
   );
+  markFresh("projections");
 }
 
 main().catch((e) => {

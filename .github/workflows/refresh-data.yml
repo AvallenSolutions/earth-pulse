@@ -1,0 +1,72 @@
+# Weekly data refresh: re-run the ingest pipeline, commit any changed static
+# JSON, and deploy to production. Keeps the historical tier at most a week
+# stale without anyone touching it.
+#
+# Required repository secret:
+#   VERCEL_TOKEN - a Vercel personal token with access to the
+#                  avallen-solutions team (Account Settings -> Tokens).
+#
+# The org/project IDs below are identifiers, not credentials; the repo is
+# private and they are useless without the token.
+
+name: Refresh data
+
+on:
+  schedule:
+    # Mondays 05:17 UTC (odd minute to avoid the top-of-hour cron stampede)
+    - cron: "17 5 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: team_QoYYeuTuR7MxOELFlg5YOH9m
+  VERCEL_PROJECT_ID: prj_OQ0Bfod87yCqEC5XOVSfEJsO1l4z
+  PRODUCTION_ALIAS: earth-pulse-alkatera.vercel.app
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ingest (OWID historical tier)
+        run: npx tsx scripts/ingest-owid.ts
+
+      - name: Commit refreshed data
+        id: commit
+        run: |
+          git add public/data data/static
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No data changes this week."
+          else
+            git config user.name "earth-pulse-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git commit -m "Data refresh: $(date -u +%Y-%m-%d)"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy to production
+        if: steps.commit.outputs.changed == 'true'
+        run: |
+          url=$(npx vercel deploy --prod --yes --token "$VERCEL_TOKEN" 2>&1 | tail -1)
+          echo "Deployed: $url"
+          # The production alias does not move automatically for CLI deploys.
+          npx vercel alias set "$url" "$PRODUCTION_ALIAS" --token "$VERCEL_TOKEN" --scope avallen-solutions
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

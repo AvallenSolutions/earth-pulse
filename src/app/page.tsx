@@ -25,6 +25,15 @@ export default async function Home({
   const countries = JSON.parse(
     readFileSync(join(dir, "countries.json"), "utf8")
   ) as Country[];
+  let dataUpdated: string | undefined;
+  try {
+    const freshness = JSON.parse(
+      readFileSync(join(dir, "freshness.json"), "utf8")
+    ) as Record<string, string>;
+    dataUpdated = freshness.metrics;
+  } catch {
+    /* stamp file appears after the first ingest run */
+  }
   const vitals = await getVitals();
   return (
     <MapExplorer
@@ -35,6 +44,7 @@ export default async function Home({
       initialYear={year ? Number(year) : undefined}
       initialView={view}
       initialScenario={scenario}
+      dataUpdated={dataUpdated}
     />
   );
 }

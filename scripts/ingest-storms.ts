@@ -12,6 +12,7 @@
  * Run: npx tsx scripts/ingest-storms.ts
  */
 import { createReadStream, writeFileSync, mkdirSync } from "node:fs";
+import { markFresh } from "./lib/freshness";
 import { createInterface } from "node:readline";
 
 type Storm = {
@@ -122,6 +123,7 @@ async function main() {
   console.log(
     `${rows} track points -> ${total} storms across ${years.length} seasons (${years[0]}-${years[years.length - 1]}), ${(bytes / 1e6).toFixed(1)}MB total`
   );
+  markFresh("storms");
 }
 
 main().catch((e) => {

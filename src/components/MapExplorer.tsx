@@ -59,6 +59,19 @@ const SCENARIOS = [
 ] as const;
 type ScenarioId = (typeof SCENARIOS)[number]["id"];
 
+/** "14:05" in the viewer's local time */
+function fmtTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+/** "today", "yesterday" or "N days ago" */
+function daysAgo(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  return `${days} days ago`;
+}
+
 const choroplethCache = new Map<string, Record<string, number>>();
 const seriesCache = new Map<string, SeriesFile>();
 
@@ -94,6 +107,7 @@ export function MapExplorer({
   initialYear,
   initialView,
   initialScenario,
+  dataUpdated,
 }: {
   metrics: Metric[];
   countries: Country[];
@@ -102,6 +116,8 @@ export function MapExplorer({
   initialYear?: number;
   initialView?: string;
   initialScenario?: string;
+  /** ISO date of the last historical-data refresh (freshness.json) */
+  dataUpdated?: string;
 }) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -144,6 +160,7 @@ export function MapExplorer({
   const [quakeHistOn, setQuakeHistOn] = useState(false);
   const [disHistOn, setDisHistOn] = useState(false);
   const [ticker, setTicker] = useState<TickerItem[]>([]);
+  const [liveAsOf, setLiveAsOf] = useState<string | null>(null);
   const [vitalsModal, setVitalsModal] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [airStatus, setAirStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -510,7 +527,8 @@ export function MapExplorer({
     }
   }, [floodsOn, mapReady]);
 
-  // Earthquakes in the last 24h (USGS, refreshed every minute)
+  // Earthquakes in the last 24h (USGS). Polls every 2 minutes while the
+  // layer is on, so an open tab keeps up with the planet.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -520,7 +538,7 @@ export function MapExplorer({
       if (map.getSource("quakes")) map.removeSource("quakes");
       return;
     }
-    (async () => {
+    const load = async () => {
       try {
         const res = await fetch("/api/quakes");
         if (!res.ok) throw new Error(String(res.status));
@@ -530,17 +548,23 @@ export function MapExplorer({
             place: string; time: number; url: string;
           }[];
         };
-        if (!alive || !mapRef.current || map.getSource("quakes")) return;
+        if (!alive || !mapRef.current) return;
+        const geojson = {
+          type: "FeatureCollection" as const,
+          features: quakes.map((q) => ({
+            type: "Feature" as const,
+            properties: q,
+            geometry: { type: "Point" as const, coordinates: [q.lon, q.lat] },
+          })),
+        };
+        const src = map.getSource("quakes") as maplibregl.GeoJSONSource | undefined;
+        if (src) {
+          src.setData(geojson);
+          return;
+        }
         map.addSource("quakes", {
           type: "geojson",
-          data: {
-            type: "FeatureCollection",
-            features: quakes.map((q) => ({
-              type: "Feature" as const,
-              properties: q,
-              geometry: { type: "Point" as const, coordinates: [q.lon, q.lat] },
-            })),
-          },
+          data: geojson,
           attribution: 'Quakes: <a href="https://earthquake.usgs.gov">USGS</a>',
         });
         map.addLayer({
@@ -564,9 +588,14 @@ export function MapExplorer({
       } catch (e) {
         console.error("[quakes layer]", e);
       }
-    })();
+    };
+    load();
+    const timer = setInterval(() => {
+      if (!document.hidden) load();
+    }, 120_000);
     return () => {
       alive = false;
+      clearInterval(timer);
     };
   }, [quakesOn, mapReady]);
 
@@ -580,7 +609,7 @@ export function MapExplorer({
       if (map.getSource("disasters")) map.removeSource("disasters");
       return;
     }
-    (async () => {
+    const load = async () => {
       try {
         const res = await fetch("/api/disasters");
         if (!res.ok) throw new Error(String(res.status));
@@ -591,17 +620,23 @@ export function MapExplorer({
             from: string; to: string; eventid: number;
           }[];
         };
-        if (!alive || !mapRef.current || map.getSource("disasters")) return;
+        if (!alive || !mapRef.current) return;
+        const geojson = {
+          type: "FeatureCollection" as const,
+          features: events.map((ev) => ({
+            type: "Feature" as const,
+            properties: ev,
+            geometry: { type: "Point" as const, coordinates: [ev.lon, ev.lat] },
+          })),
+        };
+        const src = map.getSource("disasters") as maplibregl.GeoJSONSource | undefined;
+        if (src) {
+          src.setData(geojson);
+          return;
+        }
         map.addSource("disasters", {
           type: "geojson",
-          data: {
-            type: "FeatureCollection",
-            features: events.map((ev) => ({
-              type: "Feature" as const,
-              properties: ev,
-              geometry: { type: "Point" as const, coordinates: [ev.lon, ev.lat] },
-            })),
-          },
+          data: geojson,
           attribution: 'Alerts: <a href="https://www.gdacs.org">GDACS</a>',
         });
         map.addLayer({
@@ -636,9 +671,14 @@ export function MapExplorer({
       } catch {
         /* feed unavailable */
       }
-    })();
+    };
+    load();
+    const timer = setInterval(() => {
+      if (!document.hidden) load();
+    }, 600_000);
     return () => {
       alive = false;
+      clearInterval(timer);
     };
   }, [disastersOn, mapReady]);
 
@@ -884,8 +924,8 @@ export function MapExplorer({
       if (map.getSource("air")) map.removeSource("air");
       return;
     }
-    (async () => {
-      setAirStatus("loading");
+    const load = async (first: boolean) => {
+      if (first) setAirStatus("loading");
       try {
         const res = await fetch("/api/air");
         if (!res.ok) throw new Error(String(res.status));
@@ -899,7 +939,10 @@ export function MapExplorer({
             geometry: { type: "Point" as const, coordinates: [lon, lat] },
           })),
         };
-        if (!map.getSource("air")) {
+        const src = map.getSource("air") as maplibregl.GeoJSONSource | undefined;
+        if (src) {
+          src.setData(geojson);
+        } else {
           map.addSource("air", { type: "geojson", data: geojson });
           map.addLayer({
             id: "air",
@@ -923,25 +966,32 @@ export function MapExplorer({
         }
         setAirStatus("ready");
       } catch {
-        if (alive) setAirStatus("error");
+        if (alive && first) setAirStatus("error");
       }
-    })();
+    };
+    load(true);
+    const timer = setInterval(() => {
+      if (!document.hidden) load(false);
+    }, 1_800_000);
     return () => {
       alive = false;
+      clearInterval(timer);
     };
   }, [airOn, mapReady]);
 
-  // Live event ticker: the biggest things happening on Earth right now
+  // Live event ticker: the biggest things happening on Earth right now.
+  // Refetches every 2 minutes so an open tab stays a genuine live feed.
   useEffect(() => {
     let alive = true;
-    (async () => {
+    const load = async () => {
       try {
         const [qres, dres] = await Promise.all([
           fetch("/api/quakes"),
           fetch("/api/disasters"),
         ]);
         if (!qres.ok || !dres.ok) return;
-        const { quakes } = (await qres.json()) as {
+        const { quakes, updated } = (await qres.json()) as {
+          updated?: string;
           quakes: { lon: number; lat: number; mag: number; depth: number; place: string; time: number; url: string }[];
         };
         const { events } = (await dres.json()) as {
@@ -978,12 +1028,18 @@ export function MapExplorer({
         }
         items.sort((a, b) => b.sev - a.sev);
         setTicker(items.slice(0, 14));
+        if (updated) setLiveAsOf(updated);
       } catch {
         /* ticker simply stays hidden */
       }
-    })();
+    };
+    load();
+    const timer = setInterval(() => {
+      if (!document.hidden) load();
+    }, 120_000);
     return () => {
       alive = false;
+      clearInterval(timer);
     };
   }, []);
 
@@ -1352,7 +1408,14 @@ export function MapExplorer({
       <div className="absolute right-4 top-16 z-10 hidden w-64 lg:block">
         <Panel
           title="Live layers"
-          badge={liveCount ? `${liveCount} on` : undefined}
+          badge={
+            [
+              liveCount ? `${liveCount} on` : null,
+              liveAsOf ? `as of ${fmtTime(liveAsOf)}` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || undefined
+          }
           defaultOpen={false}
         >
           {liveLayersBody}
@@ -1404,9 +1467,15 @@ export function MapExplorer({
             <div className="border-t border-white/10 pt-3">
               <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#898781]">
                 Live layers{liveCount ? ` · ${liveCount} on` : ""}
+                {liveAsOf ? ` · as of ${fmtTime(liveAsOf)}` : ""}
               </div>
               {liveLayersBody}
             </div>
+            {dataUpdated && (
+              <p className="pb-1 text-[11px] text-[#898781]">
+                Historical data updated {daysAgo(dataUpdated)}
+              </p>
+            )}
           </div>
         </div>
       )}

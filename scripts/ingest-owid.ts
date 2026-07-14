@@ -16,6 +16,7 @@
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { parseCsv } from "./lib/csv";
+import { markFresh } from "./lib/freshness";
 import { METRICS, DATASET_URLS, grapherUrl, type MetricDef } from "./lib/registry";
 
 const skipDownload = process.argv.includes("--skip-download");
@@ -252,6 +253,7 @@ async function main() {
   console.log(
     `countries: ${countryList.length} total; rejects (regional aggregates etc.): ${rejects.size}`
   );
+  markFresh("metrics");
 }
 
 main().catch((e) => {

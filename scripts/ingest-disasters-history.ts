@@ -11,6 +11,7 @@
  * Run: npx tsx scripts/ingest-disasters-history.ts
  */
 import { writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { markFresh } from "./lib/freshness";
 
 const FIRST = 2000;
 const LAST = new Date().getFullYear();
@@ -85,6 +86,7 @@ async function main() {
     JSON.stringify({ firstYear: FIRST, lastYear: LAST })
   );
   console.log(`done: ${total} events written`);
+  markFresh("disasters-history");
 }
 
 main().catch((e) => {

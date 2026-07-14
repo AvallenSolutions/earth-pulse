@@ -12,6 +12,7 @@
  * Run: npx tsx scripts/ingest-quakes-history.ts
  */
 import { writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { markFresh } from "./lib/freshness";
 
 const FIRST = 1900;
 const LAST = new Date().getFullYear();
@@ -67,6 +68,7 @@ async function main() {
     JSON.stringify({ firstYear: FIRST, lastYear: LAST })
   );
   console.log(`done: ${total} new quakes written`);
+  markFresh("quakes-history");
 }
 
 main().catch((e) => {
