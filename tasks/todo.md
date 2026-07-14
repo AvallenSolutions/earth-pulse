@@ -167,10 +167,20 @@ Full plan: ~/.claude/plans/please-write-a-plan-replicated-lantern.md
       only ships those as shapefile/KMZ zips, disproportionate for a free-tier
       proxy; documented in the route.
 
-### 7.6 Story mode + animated events
-- [ ] stories.ts + StoryPlayer.tsx: guided tours (CO2 since 1750, century of
-      storms, three futures); ?story= deep links; reduced-motion safe
-- [ ] Animated events: storm tracks draw themselves, quake pulse, fires glow
+### 7.6 Story mode + animated events ✅ (14 Jul 2026)
+- [x] stories.ts + StoryPlayer.tsx: three guided tours (CO2 since 1750, century
+      of storms, three futures); ?story= deep links; reduced-motion safe.
+      Story chips in desktop header + Stories section in mobile drawer.
+      StoryPlayer card: title, caption, progress dots, prev/play/next/close.
+      Drives metric, year, scenario, storm layer and map flyTo from config.
+- [x] Animated events: storm tracks fade in on year change during play (draw-on
+      feel); quake pulse ring on M7+ events when year changes; fires raster
+      glow-breathing. All gated on prefers-reduced-motion; rAF pauses on
+      document.hidden.
+- [x] Starfield background: canvas above WebGL, mix-blend-mode:screen so stars
+      appear only in dark space (invisible on bright globe). 220 stars, 8
+      twinkling (rAF sine wave). ResizeObserver + screen.width fallback for
+      headless environments.
 
 ## Review
 - Phases 0-5 built and launched 13 Jul 2026. Decisions along the way:

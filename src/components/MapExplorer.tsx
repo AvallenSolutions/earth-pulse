@@ -14,6 +14,9 @@ import { EventTicker, type TickerItem } from "./EventTicker";
 import { Panel } from "./Panel";
 import { MoversPanel } from "./MoversPanel";
 import { EventPopup, type MapEvent } from "./EventPopup";
+import { Starfield } from "./Starfield";
+import { StoryPlayer } from "./StoryPlayer";
+import { STORIES, type Story } from "@/lib/stories";
 
 /** Latest full GIBS imagery day (UTC yesterday). */
 function latestImageryDate(): string {
@@ -135,6 +138,7 @@ export function MapExplorer({
   initialYear,
   initialView,
   initialScenario,
+  initialStory,
   dataUpdated,
 }: {
   metrics: Metric[];
@@ -144,6 +148,7 @@ export function MapExplorer({
   initialYear?: number;
   initialView?: string;
   initialScenario?: string;
+  initialStory?: string;
   /** ISO date of the last historical-data refresh (freshness.json) */
   dataUpdated?: string;
 }) {
@@ -200,6 +205,17 @@ export function MapExplorer({
   const [vitalsModal, setVitalsModal] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [airStatus, setAirStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+
+  // Story mode
+  const [activeStory, setActiveStory] = useState<Story | null>(
+    () => STORIES.find((s) => s.id === initialStory) ?? null
+  );
+  const [storyStep, setStoryStep] = useState(0);
+  const [storyPlaying, setStoryPlaying] = useState(false);
+
+  // Animation refs (rAF handles for cleanup)
+  const stormFadeRef = useRef(0);
+  const pulseRef = useRef(0);
 
   // Init map once
   useEffect(() => {
@@ -576,7 +592,7 @@ export function MapExplorer({
     map.setProjection({ type: globeOn ? "globe" : "mercator" });
   }, [globeOn, mapReady]);
 
-  // Keep the URL shareable: /?metric=...&year=...&view=...
+  // Keep the URL shareable: /?metric=...&year=...&view=...&story=...
   useEffect(() => {
     const params = new URLSearchParams({
       metric: metricId,
@@ -585,8 +601,49 @@ export function MapExplorer({
     });
     if (PROJECTIONS[metricId] && year > (metrics.find((m) => m.id === metricId)?.lastYear ?? Infinity))
       params.set("scenario", scenario);
+    if (activeStory) params.set("story", activeStory.id);
     window.history.replaceState(null, "", `?${params.toString()}`);
-  }, [metricId, year, globeOn, scenario, metrics]);
+  }, [metricId, year, globeOn, scenario, metrics, activeStory]);
+
+  // Drive map state from the current story step (metric, year, scenario, camera, layers)
+  useEffect(() => {
+    if (!activeStory || !mapReady) return;
+    const s = activeStory.steps[storyStep];
+    const map = mapRef.current;
+    if (s.metric) setMetricId(s.metric);
+    setYear(s.year);
+    if (s.scenario) setScenario(s.scenario);
+    if (s.layers?.storms !== undefined) setStormsOn(s.layers.storms);
+    if (s.layers?.quakeHist !== undefined) setQuakeHistOn(s.layers.quakeHist);
+    if (s.camera && map) {
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduced) {
+        map.jumpTo({ center: s.camera.center, zoom: s.camera.zoom });
+      } else {
+        map.flyTo({
+          center: s.camera.center,
+          zoom: s.camera.zoom,
+          duration: s.camera.duration ?? 2200,
+          essential: true,
+        });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStory, storyStep, mapReady]);
+
+  // Auto-advance story steps when playing
+  useEffect(() => {
+    if (!storyPlaying || !activeStory) return;
+    const s = activeStory.steps[storyStep];
+    const t = setTimeout(() => {
+      if (storyStep >= activeStory.steps.length - 1) {
+        setStoryPlaying(false);
+      } else {
+        setStoryStep((i) => i + 1);
+      }
+    }, s.holdMs);
+    return () => clearTimeout(t);
+  }, [storyPlaying, activeStory, storyStep]);
 
   // Active fires layer (NASA FIRMS via our proxy so the key stays server-side)
   useEffect(() => {
@@ -604,6 +661,25 @@ export function MapExplorer({
       });
       map.addLayer({ id: "fires", type: "raster", source: "fires" });
     }
+  }, [firesOn, mapReady]);
+
+  // Fires raster glow-breathing: subtle opacity pulse while the fires layer is active
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !firesOn) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    const breathe = (t: number) => {
+      if (!document.hidden && map.getLayer("fires")) {
+        map.setPaintProperty("fires", "raster-opacity", 0.82 + 0.18 * Math.sin(t * 0.0007));
+      }
+      raf = requestAnimationFrame(breathe);
+    };
+    raf = requestAnimationFrame(breathe);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (map.getLayer("fires")) map.setPaintProperty("fires", "raster-opacity", 1);
+    };
   }, [firesOn, mapReady]);
 
   // River flood alerts (Copernicus GloFAS days 1-15 summary, via our proxy)
@@ -870,6 +946,23 @@ export function MapExplorer({
     map.setFilter("storms", ["in", ["get", "cat"], ["literal", stormCats]]);
   }, [stormCats, stormsOn, year, mapReady]);
 
+  // Fade storm tracks in when the year changes during play (draw-on feel)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !stormsOn || !playing) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    cancelAnimationFrame(stormFadeRef.current);
+    if (map.getLayer("storms")) map.setPaintProperty("storms", "line-opacity", 0);
+    const start = performance.now();
+    const animate = (now: number) => {
+      const t = Math.min((now - start) / 550, 1);
+      if (map.getLayer("storms")) map.setPaintProperty("storms", "line-opacity", t * 0.8);
+      if (t < 1) stormFadeRef.current = requestAnimationFrame(animate);
+    };
+    stormFadeRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(stormFadeRef.current);
+  }, [year, stormsOn, playing, mapReady]);
+
   // Historical M6+ earthquakes (USGS archive, 1900+), follows the year slider
   useEffect(() => {
     const map = mapRef.current;
@@ -934,6 +1027,63 @@ export function MapExplorer({
       alive = false;
     };
   }, [quakeHistOn, year, mapReady]);
+
+  // Pulse ring on M7+ quakes when the year changes (visible entry animation)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !quakeHistOn) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const data = quakeHistCache.get(year);
+    if (!data) return;
+    const bigQuakes = data.quakes.filter((q) => q.mag >= 7);
+    if (!bigQuakes.length) return;
+
+    const geojson = {
+      type: "FeatureCollection" as const,
+      features: bigQuakes.map((q) => ({
+        type: "Feature" as const,
+        properties: { mag: q.mag },
+        geometry: { type: "Point" as const, coordinates: [q.lon, q.lat] },
+      })),
+    };
+    const src = map.getSource("quake-pulse") as maplibregl.GeoJSONSource | undefined;
+    if (src) {
+      src.setData(geojson);
+    } else {
+      map.addSource("quake-pulse", { type: "geojson", data: geojson });
+      map.addLayer({
+        id: "quake-pulse",
+        type: "circle",
+        source: "quake-pulse",
+        paint: {
+          "circle-radius": [
+            "interpolate", ["linear"], ["get", "mag"], 7, 14, 9, 32,
+          ],
+          "circle-color": "transparent",
+          "circle-stroke-color": "#f0502a",
+          "circle-stroke-width": 1.5,
+          "circle-stroke-opacity": 0,
+        },
+      });
+    }
+    // Ensure pulse layer sits above quakehist
+    if (map.getLayer("quake-pulse") && map.getLayer("quakehist"))
+      map.moveLayer("quake-pulse");
+
+    cancelAnimationFrame(pulseRef.current);
+    const start = performance.now();
+    const animate = (now: number) => {
+      const t = Math.min((now - start) / 1100, 1);
+      const opacity = Math.sin(Math.PI * t) * 0.7;
+      if (map.getLayer("quake-pulse"))
+        map.setPaintProperty("quake-pulse", "circle-stroke-opacity", opacity);
+      if (t < 1) {
+        pulseRef.current = requestAnimationFrame(animate);
+      }
+    };
+    pulseRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(pulseRef.current);
+  }, [year, quakeHistOn, mapReady]);
 
   // Historical disaster events (GDACS archive, 2000+), follows the year slider
   useEffect(() => {
@@ -1719,6 +1869,10 @@ export function MapExplorer({
           explicitly rather than relying on absolute inset */}
       <div ref={mapContainer} className="absolute inset-0 h-full w-full" />
 
+      {/* Starfield: sits above the WebGL canvas, screen-blend so stars appear
+          only in the dark space behind the globe and vanish on bright surfaces */}
+      <Starfield />
+
       {/* Header + mobile burger */}
       <div className="absolute left-3 top-3 z-30 flex items-center gap-2 lg:left-4 lg:top-4 lg:block">
         <button
@@ -1749,6 +1903,25 @@ export function MapExplorer({
             <a href="/compare" className="text-[#6da7ec] hover:underline">
               Compare countries →
             </a>
+            <div className="flex flex-wrap gap-1.5">
+              {STORIES.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    setActiveStory(s);
+                    setStoryStep(0);
+                    setStoryPlaying(false);
+                  }}
+                  className={`rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
+                    activeStory?.id === s.id
+                      ? "border-[#6da7ec]/40 bg-[#6da7ec]/10 text-[#6da7ec]"
+                      : "border-white/10 text-[#898781] hover:border-white/20 hover:text-[#c3c2b7]"
+                  }`}
+                >
+                  {s.title}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -1832,6 +2005,32 @@ export function MapExplorer({
               <a href="/compare" className="text-[#6da7ec] hover:underline">
                 Compare countries →
               </a>
+            </div>
+            <div className="border-t border-white/10 pt-3">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#898781]">
+                Stories
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {STORIES.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      setActiveStory(s);
+                      setStoryStep(0);
+                      setStoryPlaying(false);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`flex flex-col rounded-lg border px-3 py-2 text-left transition-colors ${
+                      activeStory?.id === s.id
+                        ? "border-[#6da7ec]/30 bg-[#6da7ec]/5"
+                        : "border-white/5 hover:border-white/10 hover:bg-white/5"
+                    }`}
+                  >
+                    <span className="text-sm text-[#c3c2b7]">{s.title}</span>
+                    <span className="text-[11px] text-[#898781]">{s.tagline}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#898781]">
@@ -2037,6 +2236,22 @@ export function MapExplorer({
           <span>{monthMode && monthlyInfo ? monthlyInfo.lastYear : sliderMax}</span>
         </div>
       </div>
+
+      {/* Story player overlay */}
+      {activeStory && (
+        <StoryPlayer
+          story={activeStory}
+          step={storyStep}
+          playing={storyPlaying}
+          onPrev={() => setStoryStep((i) => Math.max(0, i - 1))}
+          onNext={() => setStoryStep((i) => Math.min(activeStory.steps.length - 1, i + 1))}
+          onTogglePlay={() => setStoryPlaying((p) => !p)}
+          onClose={() => {
+            setActiveStory(null);
+            setStoryPlaying(false);
+          }}
+        />
+      )}
 
       {/* Vitals history modal */}
       {vitalsModal && (

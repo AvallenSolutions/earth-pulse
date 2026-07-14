@@ -15,9 +15,10 @@ export default async function Home({
     year?: string;
     view?: string;
     scenario?: string;
+    story?: string;
   }>;
 }) {
-  const { metric, year, view, scenario } = await searchParams;
+  const { metric, year, view, scenario, story } = await searchParams;
   const dir = join(process.cwd(), "public", "data");
   const metrics = JSON.parse(
     readFileSync(join(dir, "metrics.json"), "utf8")
@@ -44,6 +45,7 @@ export default async function Home({
       initialYear={year ? Number(year) : undefined}
       initialView={view}
       initialScenario={scenario}
+      initialStory={story}
       dataUpdated={dataUpdated}
     />
   );
