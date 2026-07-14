@@ -1,5 +1,22 @@
 # Handoff: Earth Pulse — global climate & environment dashboard
-Updated: 2026-07-13 18:00 | Branch: main | Worktree: main (~/Documents/GitHub/earth-pulse) | Dev port: 3300
+Updated: 2026-07-14 14:00 | Branch: main | Worktree: main (~/Documents/GitHub/earth-pulse) | Dev port: 3300
+
+## Session 14 Jul: Phase 7 (plan: ~/.claude/plans/please-write-a-plan-replicated-lantern.md)
+- iPad stability FIXED and committed: drawer backdrop-blur over WebGL removed,
+  visibilitychange repaint added (887c1a3).
+- 7.1 DONE (0ab6f1d): weekly refresh workflow, client polling (ticker+quakes
+  2min, disasters 10min, air 30min, visibility-aware), freshness stamps in UI.
+  BLOCKED on Tim: `gh repo create AvallenSolutions/earth-pulse --private
+  --source . --push` (classifier refuses) + add VERCEL_TOKEN repo secret.
+- 7.2 DONE (c5e0978): 8 new metrics (consumption CO2, aviation, oil/gas elec,
+  sanitation, marine protected, ozone substances, urban share; waste + air
+  pollution deaths rejected, non-redistributable), Stripes.tsx, MoversPanel.tsx.
+- 7.3 DONE (fd46c3b): ingest-monthly.ts (CCKP ERA5 observed, NOT Open-Meteo),
+  monthly temp/precip anomalies 1950-2024, Monthly toggle + month play on the
+  map slider. Verified: GBR 2018 heatwave/BftE, PAK Jul 2022 +156%.
+- NEXT: 7.4 futures (CCKP pr projections, Aqueduct water stress, IPCC sea
+  level fan on /planet), 7.5 live layers (NHC cones, GVP volcanoes, SWPC
+  aurora), 7.6 story mode + animated events. Not deployed; deploy needs Tim.
 
 ## Goal
 A free, public awareness dashboard for global climate/environment data: an interactive world

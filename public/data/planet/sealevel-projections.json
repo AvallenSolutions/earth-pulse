@@ -1,0 +1,33 @@
+{
+  "source": "IPCC AR6 WGI Table 9.9 (medium confidence processes)",
+  "sourceUrl": "https://www.ipcc.ch/report/ar6/wg1/chapter/chapter-9/",
+  "baseline": "1995-2014",
+  "unit": "m",
+  "note": "Global mean sea level rise relative to the 1995-2014 average. Median [likely range]. Curated by hand from the published table; verified against the chapter executive summary and the European Environment Agency indicator.",
+  "scenarios": {
+    "ssp126": {
+      "label": "Low · SSP1-2.6",
+      "points": [
+        { "year": 2030, "median": 0.09, "low": 0.08, "high": 0.12 },
+        { "year": 2050, "median": 0.19, "low": 0.16, "high": 0.25 },
+        { "year": 2100, "median": 0.44, "low": 0.32, "high": 0.61 }
+      ]
+    },
+    "ssp245": {
+      "label": "Middle · SSP2-4.5",
+      "points": [
+        { "year": 2030, "median": 0.09, "low": 0.08, "high": 0.12 },
+        { "year": 2050, "median": 0.2, "low": 0.17, "high": 0.26 },
+        { "year": 2100, "median": 0.56, "low": 0.44, "high": 0.76 }
+      ]
+    },
+    "ssp585": {
+      "label": "High · SSP5-8.5",
+      "points": [
+        { "year": 2030, "median": 0.1, "low": 0.09, "high": 0.12 },
+        { "year": 2050, "median": 0.23, "low": 0.2, "high": 0.29 },
+        { "year": 2100, "median": 0.77, "low": 0.63, "high": 1.01 }
+      ]
+    }
+  }
+}

@@ -189,6 +189,86 @@ export default function PlanetPage() {
         </div>
 
         {(() => {
+          // The sea to 2100: observed record + IPCC AR6 scenario fan
+          type SeaProj = {
+            source: string;
+            sourceUrl: string;
+            scenarios: Record<
+              string,
+              { label: string; points: { year: number; median: number }[] }
+            >;
+          };
+          let proj: SeaProj | null = null;
+          try {
+            proj = load<SeaProj>("planet/sealevel-projections.json");
+          } catch {
+            proj = null;
+          }
+          const observed = load<SeriesFile>("series/sea_level.json")["WLD"];
+          if (!proj || !observed || observed.length < 2) return null;
+          // AR6 baseline is 1995-2014 (midpoint ~2005); shift the projections
+          // onto the observed record's own baseline so the curves join up.
+          const at2005 =
+            observed.find(([y]) => y === 2005)?.[1] ??
+            observed[observed.length - 1][1];
+          const last = observed[observed.length - 1];
+          const colours: Record<string, string> = {
+            ssp126: "#199e70",
+            ssp245: "#e0a355",
+            ssp585: "#e66767",
+          };
+          const overlays = Object.entries(proj.scenarios).map(([id, sc]) => ({
+            label: sc.label,
+            colour: colours[id] ?? "#898781",
+            points: [
+              last,
+              ...sc.points.map(
+                (p) =>
+                  [p.year, Math.round(p.median * 1000 + at2005)] as [
+                    number,
+                    number,
+                  ]
+              ),
+            ],
+          }));
+          return (
+            <section className="mt-10">
+              <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-[#898781]">
+                The sea to 2100
+              </h2>
+              <div className="rounded-xl border border-white/10 bg-[#1a1a19] p-4">
+                <h3 className="text-sm font-medium">
+                  Global sea level, observed and projected under three scenarios
+                </h3>
+                <div className="mt-3">
+                  <LineChart
+                    points={observed}
+                    unit="mm vs 1993-2008"
+                    colour={accentFor("sequential", "blues")}
+                    overlays={overlays}
+                  />
+                </div>
+                <p className="mt-2 text-xs leading-snug text-[#898781]">
+                  Solid line: the observed global average. Dashed lines: median
+                  projections from{" "}
+                  <a
+                    href={proj.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#6da7ec] hover:underline"
+                  >
+                    {proj.source}
+                  </a>
+                  , aligned to the observed record&apos;s baseline. Even the
+                  lowest pathway commits the sea to further rise; the scenarios
+                  only truly part ways after mid-century.
+                </p>
+              </div>
+            </section>
+          );
+        })()}
+
+        {(() => {
           const renewables = allMetrics.find(
             (m) => m.id === "renewables_share_energy"
           );

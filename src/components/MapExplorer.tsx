@@ -52,6 +52,7 @@ type Hover = {
 /** Metrics with published scenario projections (CMIP6 via World Bank CCKP). */
 const PROJECTIONS: Record<string, { firstYear: number; lastYear: number }> = {
   temperature_anomaly: { firstYear: 2026, lastYear: 2100 },
+  precipitation: { firstYear: 2026, lastYear: 2100 },
 };
 const SCENARIOS = [
   { id: "ssp126", label: "Low", detail: "SSP1-2.6", colour: "#199e70" },

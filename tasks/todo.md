@@ -143,10 +143,16 @@ Full plan: ~/.claude/plans/please-write-a-plan-replicated-lantern.md
       (Beast from the East), PAK Jul 2022 +156% (flood monsoon).
 - [ ] Later: NSIDC monthly sea ice + NOAA monthly CO2 (global series, /planet)
 
-### 7.4 More futures to 2100
-- [ ] CCKP precipitation projections (extend ingest-projections.ts, delta method)
-- [ ] WRI Aqueduct water stress 2030/50/80 (ingest-aqueduct.ts, snap slider)
-- [ ] IPCC AR6 sea level fan chart on /planet
+### 7.4 More futures to 2100 (2 of 3 done, 14 Jul 2026)
+- [x] CCKP precipitation projections: ingest-projections.ts is now
+      variable-generic (tas + pr), delta method vs observed precipitation,
+      190 countries x 3 scenarios to 2100, floor at 0mm; precipitation added
+      to the PROJECTIONS map (verified on the map at 2080)
+- [x] IPCC AR6 sea level fan chart on /planet: curated Table 9.9 medians
+      (public/data/planet/sealevel-projections.json, verified against the
+      chapter executive summary + EEA), observed record + 3 dashed scenarios
+- [ ] WRI Aqueduct water stress 2030/50/80: needs source discovery for the
+      country-level futures CSV (ingest-aqueduct.ts, slider snaps to horizons)
 
 ### 7.5 New live layers
 - [ ] /api/hurricanes: NOAA NHC forecast cones + tracks (15 min cache)
