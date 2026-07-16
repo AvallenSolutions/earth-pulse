@@ -2,6 +2,23 @@
 Updated: 2026-07-16 (evening) | Branch: main (in sync with origin) | Dev port: 3300
 Remote: https://github.com/AvallenSolutions/earth-pulse (private)
 
+## Latest: Phase 7.9 — the real sky (pushed)
+Both skies are now genuine astronomy. scripts/build-stars.ts bakes the Yale
+Bright Star Catalogue (8,404 stars, colour temperatures, names) and
+d3-celestial constellation figures into public/data/{stars,constellations}.json.
+src/lib/celestial.ts has GMST, alt/az, sky-basis vectors, Kelvin->RGB and a
+Milky Way in real galactic coordinates (Great Rift included). Starfield shows
+the actual sky behind the Earth (antipodal zenith of the view centre at the
+current sidereal time, stereographic, north up) and slides as the globe pans.
+SkySimulator renders each latitude's real hemisphere on a canonical January
+evening (LST 5.8h), draggable through the full horizon with a live compass
+label, photo bloom/diffraction spikes, atmospheric extinction, M31/M42/
+Pleiades/Carina drawn + labelled, constellation toggle, and a latitude-aware
+checklist (never rises / below horizon / lost / visible + direction). Verified
+for Tokyo (Orion labelled facing south, Plough NE) and Sydney (facing north,
+Orion inverted, "Plough never rises at this latitude"). Simulator lat comes
+from the city record, the sky popup, or the map centre (standalone button).
+
 ## Latest: news feed production fix (b5226ff, pushed)
 Production news was failing constantly: GDELT rate limits per IP with long
 penalties and Vercel's shared egress is effectively always throttled. Fix:

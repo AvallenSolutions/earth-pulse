@@ -2,160 +2,53 @@
 import { useEffect, useRef } from "react";
 import type maplibregl from "maplibre-gl";
 import { globePixelRadius } from "./GlobeAtmosphere";
+import {
+  dot,
+  fetchStars,
+  gmstHours,
+  kelvinToRgb,
+  milkyWayBlobs,
+  raDecToVec,
+  skyBasis,
+  type Vec3,
+} from "@/lib/celestial";
 
 /**
- * A realistic night sky behind the globe: thousands of stars with a natural
- * magnitude distribution and temperature-based colours, a soft Milky Way band,
- * and a faint halo on the brightest few. Everything static is pre-rendered to
- * an offscreen canvas once; only the handful of twinkling stars redraw per
- * frame. The canvas screen-blends over the WebGL map so stars show only in
- * dark space and vanish on the bright globe disc.
+ * The real night sky behind the globe. Every star is a genuine catalogue
+ * star (Yale Bright Star Catalogue) and the Milky Way follows the real
+ * galactic plane, so the background is the actual patch of celestial sphere
+ * behind the Earth for the current view: pan the globe and the true sky
+ * slides past with it.
+ *
+ * Geometry: a viewer above the map centre looking down sees, behind the
+ * planet, the sky around the antipodal zenith (RA = sidereal time at the
+ * centre longitude + 12h, Dec = -latitude). Stars are projected
+ * stereographically around that point with celestial north up. The globe's
+ * disc is masked out each frame so stars never show through the dark side,
+ * and the canvas screen-blends over the WebGL map.
  */
 
-interface Star {
+type ProjStar = {
   x: number;
   y: number;
   r: number;
-  alpha: number;
+  a: number;
   colour: string;
   twinkle: boolean;
   phase: number;
   speed: number;
-}
+};
 
-/** Stellar colours, weighted roughly like the night sky looks to the eye:
- *  mostly white, some blue-white, a few warm yellow-orange giants. */
-const STAR_COLOURS: [string, number][] = [
-  ["202,215,255", 0.14], // blue-white (O/B)
-  ["232,238,255", 0.2], // white-blue (A)
-  ["255,255,255", 0.3], // white (F)
-  ["255,244,232", 0.2], // yellow-white (G)
-  ["255,231,200", 0.11], // orange (K)
-  ["255,214,170", 0.05], // red-orange (M giants)
-];
+type CatStar = { mag: number; k: number; v: Vec3; ra: number; dec: number };
 
-function makeRand(seed: number) {
-  return () => {
-    seed ^= seed << 13;
-    seed ^= seed >> 17;
-    seed ^= seed << 5;
-    return (seed >>> 0) / 0x100000000;
-  };
-}
-
-function pickColour(rand: () => number): string {
-  let u = rand();
-  for (const [rgb, w] of STAR_COLOURS) {
-    if (u < w) return rgb;
-    u -= w;
-  }
-  return "255,255,255";
-}
-
-/** The Milky Way arc through the scene: for a given x (as 0..1 of width),
- *  the band centre y (as 0..1 of height). A gentle diagonal sweep. */
-function bandCentre(t: number): number {
-  return 0.78 - 0.62 * t + 0.06 * Math.sin(t * Math.PI * 1.7);
-}
-
-function buildStars(W: number, H: number): Star[] {
-  const rand = makeRand(0x2f6e2b1a);
-  const stars: Star[] = [];
-  const count = Math.min(2200, Math.round((W * H) / 700));
-
-  for (let i = 0; i < count; i++) {
-    // Power-law brightness: most stars faint, a rare few bright
-    const u = Math.pow(rand(), 3.2);
-    const bright = u > 0.82;
-    // A third of the stars cluster along the Milky Way band
-    let x = rand() * W;
-    let y = rand() * H;
-    if (i % 4 === 0) {
-      const t = rand();
-      x = t * W;
-      y = (bandCentre(t) + (rand() + rand() - 1) * 0.13) * H;
-    }
-    stars.push({
-      x,
-      y,
-      r: 0.25 + u * 1.15,
-      alpha: 0.08 + u * 0.82,
-      colour: pickColour(rand),
-      twinkle: bright && rand() < 0.55,
-      phase: rand() * Math.PI * 2,
-      speed: rand() * 0.6 + 0.25,
-    });
-  }
-  return stars;
-}
-
-/** Pre-render the Milky Way and all non-twinkling stars. */
-function paintStatic(W: number, H: number, stars: Star[]): HTMLCanvasElement {
-  const off = document.createElement("canvas");
-  off.width = W;
-  off.height = H;
-  const ctx = off.getContext("2d")!;
-  const rand = makeRand(0x9e3779b9);
-
-  // Milky Way: many overlapping soft blobs along the band, denser mid-arc
-  const blobs = Math.round(W / 6);
-  for (let i = 0; i < blobs; i++) {
-    const t = rand();
-    const cx = t * W;
-    const spread = 0.05 + 0.07 * Math.sin(t * Math.PI); // widest mid-band
-    const cy = (bandCentre(t) + (rand() + rand() - 1) * spread) * H;
-    const radius = (0.03 + rand() * 0.075) * Math.max(W, H);
-    const warm = rand() < 0.3;
-    const a = 0.008 + rand() * 0.014;
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-    g.addColorStop(0, `rgba(${warm ? "228,214,200" : "196,210,238"},${a.toFixed(3)})`);
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
-  }
-  // Dust lanes: subtle darker streaks through the band core
-  ctx.globalCompositeOperation = "destination-out";
-  for (let i = 0; i < 14; i++) {
-    const t = 0.15 + rand() * 0.7;
-    const cx = t * W;
-    const cy = bandCentre(t) * H + (rand() - 0.5) * 0.04 * H;
-    const radius = (0.02 + rand() * 0.04) * Math.max(W, H);
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-    g.addColorStop(0, `rgba(0,0,0,${(0.25 + rand() * 0.3).toFixed(2)})`);
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
-  }
-  ctx.globalCompositeOperation = "source-over";
-
-  for (const st of stars) {
-    if (st.twinkle) continue;
-    drawStar(ctx, st, st.alpha);
-  }
-  return off;
-}
-
-function drawStar(ctx: CanvasRenderingContext2D, st: Star, alpha: number) {
-  // The brightest stars get a soft halo, like slight glare
-  if (st.r > 1.05) {
-    const g = ctx.createRadialGradient(st.x, st.y, 0, st.x, st.y, st.r * 5);
-    g.addColorStop(0, `rgba(${st.colour},${(alpha * 0.35).toFixed(3)})`);
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(st.x - st.r * 5, st.y - st.r * 5, st.r * 10, st.r * 10);
-  }
-  ctx.beginPath();
-  ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
-  ctx.fillStyle = `rgba(${st.colour},${alpha.toFixed(3)})`;
-  ctx.fill();
-}
+const DIAG_HALF_FOV = 62; // degrees of sky from screen centre to corner
 
 export function Starfield({
   map,
   globeOn,
 }: {
   /** When set (globe projection on), the planet's disc is masked out of the
-   *  sky so stars never show through the dark night side of the Earth. */
+   *  sky so stars never show through the dark night side. */
   map: maplibregl.Map | null;
   globeOn: boolean;
 }) {
@@ -167,13 +60,91 @@ export function Starfield({
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const gmst = gmstHours(Date.now());
     let raf = 0;
-    let sizeKey = "";
-    let repaint: (() => void) | null = null;
+    let W = 0;
+    let H = 0;
+    let stars: CatStar[] = [];
+    const blobs = milkyWayBlobs().map((b) => ({ ...b, v: raDecToVec(b.ra, b.dec) }));
+    let projected: ProjStar[] = [];
+    let mwLayer: HTMLCanvasElement | null = null;
+    let viewKey = "";
+    let disposed = false;
 
-    // Erase the globe's disc (always screen-centred in globe projection) so
-    // stars never show through the dark night side of the planet.
-    const maskGlobe = (ctx: CanvasRenderingContext2D, W: number, H: number) => {
+    const centre = () => {
+      const c = map?.getCenter();
+      const lon = c?.lng ?? 0;
+      const lat = c?.lat ?? 20;
+      return {
+        ra: ((gmst * 15 + lon + 180) % 360 + 360) % 360,
+        dec: Math.min(85, Math.max(-85, -lat)),
+      };
+    };
+
+    /** Recompute the projected sky for the current view centre. */
+    const project = () => {
+      if (!W || !H) return;
+      const { ra, dec } = centre();
+      const { f, e, n } = skyBasis(ra, dec);
+      const fl = Math.hypot(W, H) / 2 / (2 * Math.tan(((DIAG_HALF_FOV / 2) * Math.PI) / 180));
+      const cx = W / 2;
+      const cy = H / 2;
+      const cull = Math.cos(((DIAG_HALF_FOV + 8) * Math.PI) / 180);
+
+      projected = [];
+      for (const st of stars) {
+        const d = dot(f, st.v);
+        if (d < cull) continue;
+        const k = (2 * fl) / (1 + d);
+        const x = cx + k * dot(e, st.v);
+        const y = cy - k * dot(n, st.v);
+        if (x < -24 || x > W + 24 || y < -24 || y > H + 24) continue;
+        const b = Math.min(Math.max((6.7 - st.mag) / 7, 0), 1);
+        projected.push({
+          x,
+          y,
+          r: (0.35 + 2.3 * b * b) * (dpr / 2 + 0.5),
+          a: 0.15 + 0.85 * b,
+          colour: kelvinToRgb(st.k),
+          // Deterministic per star so panning does not reshuffle the sky
+          twinkle: st.mag < 3.6 && (st.ra * 100) % 7 < 3,
+          phase: ((st.ra * 13.7) % 6.28) + st.dec / 90,
+          speed: 0.3 + (((st.dec * 7.31 + st.ra) % 1) + 1) % 1 * 0.5,
+        });
+      }
+
+      // The Milky Way band, projected the same way onto its own layer
+      mwLayer ??= document.createElement("canvas");
+      if (mwLayer.width !== W || mwLayer.height !== H) {
+        mwLayer.width = W;
+        mwLayer.height = H;
+      }
+      const mctx = mwLayer.getContext("2d")!;
+      mctx.clearRect(0, 0, W, H);
+      const degPx = (2 * fl * Math.PI) / 360; // px per degree near centre
+      for (const pass of [false, true]) {
+        mctx.globalCompositeOperation = pass ? "destination-out" : "source-over";
+        for (const bl of blobs) {
+          if (bl.dark !== pass) continue;
+          const d = dot(f, bl.v);
+          if (d < cull) continue;
+          const k = (2 * fl) / (1 + d);
+          const x = cx + k * dot(e, bl.v);
+          const y = cy - k * dot(n, bl.v);
+          const radius = bl.size * degPx;
+          if (x < -radius || x > W + radius || y < -radius || y > H + radius) continue;
+          const g = mctx.createRadialGradient(x, y, 0, x, y, radius);
+          const tint = bl.dark ? "0,0,0" : bl.warm ? "228,212,196" : "198,210,236";
+          g.addColorStop(0, `rgba(${tint},${bl.alpha.toFixed(3)})`);
+          g.addColorStop(1, `rgba(${tint},0)`);
+          mctx.fillStyle = g;
+          mctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+        }
+      }
+      mctx.globalCompositeOperation = "source-over";
+    };
+
+    const maskGlobe = (ctx: CanvasRenderingContext2D) => {
       if (!map || !globeOn) return;
       const r = globePixelRadius(map) * dpr;
       ctx.save();
@@ -185,82 +156,97 @@ export function Starfield({
       ctx.restore();
     };
 
-    const build = (cssW: number, cssH: number) => {
-      const key = `${cssW}x${cssH}`;
-      if (key === sizeKey) return;
-      sizeKey = key;
-      cancelAnimationFrame(raf);
-
-      const W = Math.round(cssW * dpr);
-      const H = Math.round(cssH * dpr);
-      canvas.width = W;
-      canvas.height = H;
-
-      const stars = buildStars(W, H);
-      const staticLayer = paintStatic(W, H, stars);
+    const paint = (time?: number) => {
       const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      const twinklers = stars.filter((st) => st.twinkle);
-      const paintFrame = (t?: number) => {
-        ctx.clearRect(0, 0, W, H);
-        ctx.drawImage(staticLayer, 0, 0);
-        for (const st of twinklers) {
-          const a =
-            t === undefined
-              ? st.alpha
-              : st.alpha * (0.55 + 0.45 * Math.sin(t * 0.0009 * st.speed + st.phase));
-          drawStar(ctx, st, a);
+      if (!ctx || !W || !H) return;
+      ctx.clearRect(0, 0, W, H);
+      if (mwLayer) ctx.drawImage(mwLayer, 0, 0);
+      for (const st of projected) {
+        let a = st.a;
+        if (st.twinkle && time !== undefined)
+          a *= 0.72 + 0.28 * Math.sin(time * 0.0011 * st.speed + st.phase);
+        if (st.r > 1.7) {
+          // Bright star: soft halo plus a crisp core
+          const g = ctx.createRadialGradient(st.x, st.y, 0, st.x, st.y, st.r * 4.5);
+          g.addColorStop(0, `rgba(${st.colour},${(a * 0.5).toFixed(3)})`);
+          g.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = g;
+          ctx.fillRect(st.x - st.r * 4.5, st.y - st.r * 4.5, st.r * 9, st.r * 9);
+          ctx.beginPath();
+          ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${st.colour},${a.toFixed(3)})`;
+          ctx.fill();
+        } else {
+          // Fast path for the thousands of faint stars
+          const s = Math.max(1, st.r * 1.6);
+          ctx.fillStyle = `rgba(${st.colour},${a.toFixed(3)})`;
+          ctx.fillRect(st.x - s / 2, st.y - s / 2, s, s);
         }
-        maskGlobe(ctx, W, H);
-      };
-      repaint = () => paintFrame();
-
-      // First paint immediately (even in hidden/backgrounded tabs) so the sky
-      // is never blank; the rAF loop only animates the twinkle on top.
-      paintFrame();
-      if (reduced) return;
-
-      const draw = (t: number) => {
-        if (!document.hidden) paintFrame(t);
-        raf = requestAnimationFrame(draw);
-      };
-      raf = requestAnimationFrame(draw);
+      }
+      maskGlobe(ctx);
     };
 
-    // The globe disc grows with zoom and with latitude (the projection matches
-    // mercator scale at the centre); repaint the mask even when the rAF loop
-    // is paused (reduced motion or a backgrounded tab).
-    const onZoom = () => repaint?.();
-    map?.on("zoom", onZoom);
-    map?.on("move", onZoom);
+    const refresh = () => {
+      const c = map?.getCenter();
+      const key = `${c?.lng.toFixed(2)},${c?.lat.toFixed(2)},${W}x${H},${map ? globePixelRadius(map).toFixed(0) : 0}`;
+      if (key !== viewKey) {
+        viewKey = key;
+        project();
+      }
+      paint();
+    };
 
-    // ResizeObserver fires once the element has layout dimensions (and again
-    // on window resize, rebuilding the sky at the new size).
+    const build = (cssW: number, cssH: number) => {
+      W = Math.round(cssW * dpr);
+      H = Math.round(cssH * dpr);
+      canvas.width = W;
+      canvas.height = H;
+      viewKey = "";
+      refresh();
+    };
+
+    fetchStars().then((catalogue) => {
+      if (disposed) return;
+      stars = catalogue.map((s) => ({
+        mag: s.mag,
+        k: s.k,
+        ra: s.ra,
+        dec: s.dec,
+        v: raDecToVec(s.ra, s.dec),
+      }));
+      viewKey = "";
+      refresh();
+    });
+
+    // The sky slides with the globe: reproject on pan/zoom, repaint on both
+    const onMove = () => refresh();
+    map?.on("move", onMove);
+    map?.on("zoom", onMove);
+
     const ro = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
       if (width > 0 && height > 0) build(Math.round(width), Math.round(height));
     });
     ro.observe(canvas);
 
-    // Immediate path for normal browsers where dimensions are already known.
-    // Fall back to screen size (divided by DPR for logical pixels) for embedded
-    // preview environments where offsetWidth and window.innerWidth are both 0.
-    const W =
-      canvas.offsetWidth ||
-      window.innerWidth ||
-      Math.round(screen.width / dpr) ||
-      1280;
-    const H =
-      canvas.offsetHeight ||
-      window.innerHeight ||
-      Math.round(screen.height / dpr) ||
-      800;
-    if (W > 0 && H > 0) build(W, H);
+    // Immediate path for normal browsers; screen-size fallback for embedded
+    // panes where layout reports zero
+    const cssW = canvas.offsetWidth || window.innerWidth || Math.round(screen.width / dpr) || 1280;
+    const cssH = canvas.offsetHeight || window.innerHeight || Math.round(screen.height / dpr) || 800;
+    if (cssW > 0 && cssH > 0) build(cssW, cssH);
+
+    if (!reduced) {
+      const tick = (time: number) => {
+        paint(time);
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }
 
     return () => {
-      map?.off("zoom", onZoom);
-      map?.off("move", onZoom);
+      disposed = true;
+      map?.off("move", onMove);
+      map?.off("zoom", onMove);
       ro.disconnect();
       cancelAnimationFrame(raf);
     };

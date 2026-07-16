@@ -11,38 +11,148 @@ import {
   smoothstep,
   starsAboveHorizon,
 } from "@/lib/sky";
+import {
+  SKY_OBJECTS,
+  altAz,
+  compassWord,
+  fetchConstellations,
+  fetchStars,
+  kelvinToRgb,
+  milkyWayBlobs,
+  type SkyObject,
+} from "@/lib/celestial";
 
 /**
- * Full-screen night sky simulator: one slider takes the sky from a pristine
- * dark site to an inner city, and the canvas shows exactly what that costs.
- * Stars carry honest apparent magnitudes, so the thinning of the sky tracks
- * the real naked-eye limiting magnitude; the Milky Way and a growing amber
- * skyglow dome follow the same physics-based value (zenith brightness in
- * mag/arcsec^2 from the Light Pollution Atlas).
+ * Full-screen night sky simulator, now the real sky: every star is a Yale
+ * Bright Star Catalogue star placed by genuine astronomy for the viewer's
+ * latitude on a canonical clear January evening (22:00 local, when Orion,
+ * the Plough and Andromeda share the sky at northern mid-latitudes). The
+ * Milky Way follows the real galactic plane; the Andromeda galaxy, Orion
+ * Nebula, Pleiades and Carina Nebula are drawn at their true positions;
+ * constellation figures and labels can be toggled. Drag to look around the
+ * whole horizon.
  *
- * When opened from a city it also carries that city's 2016-2024 history so
- * people can scrub through how their own sky has changed.
+ * One slider still drives everything: sky brightness (mpsas) from the
+ * Light Pollution Atlas sets the naked-eye limit, star wash, skyglow dome
+ * and which showpieces survive.
  */
 
 const MPSAS_MIN = 16.5;
 const MPSAS_MAX = 22.0;
+
+// Canonical evening: mid-January, 22:00 local mean time -> LST ~ 5.8h,
+// independent of longitude. Orion is near the meridian.
+const LST_HOURS = 5.8;
+const MAX_ALT = 85; // degrees of sky above the horizon shown
 
 // Tunable feel constants
 const STAR_FADE_MAG = 0.8; // soft fade width at the visibility limit
 const GLOW_EASE = 1.6; // skyglow ramp: g = t^GLOW_EASE
 const MW_FADE: [number, number] = [20.1, 21.4]; // Milky Way smoothstep window
 
-/* ---- canvas building blocks (adapted from Starfield.tsx, which is
-        coupled to the globe mask and so not imported directly) ---- */
+type SkyStar = {
+  az: number;
+  alt: number;
+  mag: number;
+  colour: string;
+  twinkle: boolean;
+  phase: number;
+  speed: number;
+};
 
-const STAR_COLOURS: [string, number][] = [
-  ["202,215,255", 0.14],
-  ["232,238,255", 0.2],
-  ["255,255,255", 0.3],
-  ["255,244,232", 0.2],
-  ["255,231,200", 0.11],
-  ["255,214,170", 0.05],
-];
+type Segment = { az1: number; alt1: number; az2: number; alt2: number };
+
+type PlacedObject = SkyObject & { az: number; alt: number };
+
+type SkyData = {
+  stars: SkyStar[];
+  segments: Segment[];
+  objects: PlacedObject[];
+  /** 360-degree Milky Way strip, x = azimuth, y = altitude */
+  strip: HTMLCanvasElement;
+  stripPxPerDeg: number;
+};
+
+const wrap180 = (a: number) => ((a + 540) % 360) - 180;
+
+/** Atmospheric extinction: stars dim towards the horizon. */
+const horizonDim = (alt: number) => (alt < 15 ? 0.35 + 0.65 * (alt / 15) : 1);
+
+async function buildSkyData(lat: number): Promise<SkyData> {
+  const [catalogue, constellations] = await Promise.all([
+    fetchStars(),
+    fetchConstellations(),
+  ]);
+
+  const stars: SkyStar[] = [];
+  for (const s of catalogue) {
+    const { alt, az } = altAz(s.ra, s.dec, lat, LST_HOURS);
+    if (alt < -2) continue;
+    stars.push({
+      az,
+      alt,
+      mag: s.mag,
+      colour: kelvinToRgb(s.k),
+      twinkle: s.mag < 4.2 && (s.ra * 100) % 5 < 2,
+      phase: (s.ra * 13.7) % 6.28,
+      speed: 0.3 + ((((s.dec * 7.31 + s.ra) % 1) + 1) % 1) * 0.5,
+    });
+  }
+
+  const segments: Segment[] = [];
+  for (const lines of Object.values(constellations)) {
+    for (const line of lines) {
+      for (let i = 1; i < line.length; i++) {
+        const a = altAz(line[i - 1][0] / 100, line[i - 1][1] / 100, lat, LST_HOURS);
+        const b = altAz(line[i][0] / 100, line[i][1] / 100, lat, LST_HOURS);
+        if (Math.max(a.alt, b.alt) < 0) continue;
+        if (Math.abs(wrap180(a.az - b.az)) > 90) continue; // wrap artefact
+        segments.push({ az1: a.az, alt1: a.alt, az2: b.az, alt2: b.alt });
+      }
+    }
+  }
+
+  const objects: PlacedObject[] = SKY_OBJECTS.map((o) => {
+    const { alt, az } = altAz(o.ra, o.dec, lat, LST_HOURS);
+    return { ...o, alt, az };
+  });
+
+  // Milky Way: pre-render the full 360-degree band once; frames blit a window
+  const stripPxPerDeg = 4; // fixed working resolution, scaled on composite
+  const strip = document.createElement("canvas");
+  strip.width = 360 * stripPxPerDeg;
+  strip.height = MAX_ALT * stripPxPerDeg;
+  const sctx = strip.getContext("2d")!;
+  const yFor = (alt: number) => strip.height * (1 - alt / MAX_ALT);
+  for (const pass of [false, true]) {
+    sctx.globalCompositeOperation = pass ? "destination-out" : "source-over";
+    for (const bl of milkyWayBlobs()) {
+      if (bl.dark !== pass) continue;
+      const { alt, az } = altAz(bl.ra, bl.dec, lat, LST_HOURS);
+      if (alt < -8) continue;
+      const radius = bl.size * stripPxPerDeg;
+      const y = yFor(alt);
+      const dim = horizonDim(Math.max(alt, 0));
+      const tint = bl.dark ? "0,0,0" : bl.warm ? "228,212,196" : "198,210,236";
+      const alpha = bl.dark ? bl.alpha : bl.alpha * 1.6 * dim;
+      for (const xBase of [az * stripPxPerDeg, az * stripPxPerDeg - strip.width, az * stripPxPerDeg + strip.width]) {
+        if (xBase < -radius || xBase > strip.width + radius) continue;
+        const g = sctx.createRadialGradient(xBase, y, 0, xBase, y, radius);
+        g.addColorStop(0, `rgba(${tint},${alpha.toFixed(3)})`);
+        g.addColorStop(1, `rgba(${tint},0)`);
+        sctx.fillStyle = g;
+        sctx.fillRect(xBase - radius, y - radius, radius * 2, radius * 2);
+      }
+    }
+  }
+  sctx.globalCompositeOperation = "source-over";
+  return { stars, segments, objects, strip, stripPxPerDeg };
+}
+
+type Silhouette = {
+  layer: HTMLCanvasElement;
+  windows: { x: number; y: number; r: number }[];
+};
 
 function makeRand(seed: number) {
   return () => {
@@ -52,104 +162,6 @@ function makeRand(seed: number) {
     return (seed >>> 0) / 0x100000000;
   };
 }
-
-function pickColour(rand: () => number): string {
-  let u = rand();
-  for (const [rgb, w] of STAR_COLOURS) {
-    if (u < w) return rgb;
-    u -= w;
-  }
-  return "255,255,255";
-}
-
-/** Milky Way arc across the upper two thirds of the frame (0..1 of height). */
-function bandCentre(t: number): number {
-  return (0.78 - 0.62 * t + 0.06 * Math.sin(t * Math.PI * 1.7)) * 0.72;
-}
-
-type SimStar = {
-  x: number;
-  y: number;
-  mag: number;
-  r: number;
-  baseAlpha: number;
-  colour: string;
-  twinkle: boolean;
-  phase: number;
-  speed: number;
-};
-
-function buildStars(W: number, H: number, horizonY: number): SimStar[] {
-  const rand = makeRand(0x51a7b3c9);
-  const stars: SimStar[] = [];
-  const count = Math.min(3000, Math.round((W * H) / 550));
-  for (let i = 0; i < count; i++) {
-    // Inverse-CDF of real cumulative counts: N(<m) roughly triples per mag
-    const mag = Math.max(0.5, 6.8 + Math.log10(rand() + 1e-4) / 0.51);
-    const b = Math.min(Math.max((6.8 - mag) / 6.3, 0), 1);
-    let x = rand() * W;
-    let y = rand() * horizonY;
-    if (i % 4 === 0) {
-      const t = rand();
-      x = t * W;
-      y = Math.min(horizonY, (bandCentre(t) + (rand() + rand() - 1) * 0.1) * H);
-    }
-    stars.push({
-      x,
-      y,
-      mag,
-      r: 0.3 + 1.6 * Math.pow(b, 1.3),
-      baseAlpha: 0.1 + 0.85 * b,
-      colour: pickColour(rand),
-      twinkle: b > 0.55 && rand() < 0.5,
-      phase: rand() * Math.PI * 2,
-      speed: rand() * 0.6 + 0.25,
-    });
-  }
-  return stars;
-}
-
-function paintMilkyWay(W: number, H: number): HTMLCanvasElement {
-  const off = document.createElement("canvas");
-  off.width = W;
-  off.height = H;
-  const ctx = off.getContext("2d")!;
-  const rand = makeRand(0x9e3779b9);
-  const blobs = Math.round(W / 6);
-  for (let i = 0; i < blobs; i++) {
-    const t = rand();
-    const cx = t * W;
-    const spread = 0.04 + 0.05 * Math.sin(t * Math.PI);
-    const cy = (bandCentre(t) + (rand() + rand() - 1) * spread) * H;
-    const radius = (0.03 + rand() * 0.075) * Math.max(W, H);
-    const warm = rand() < 0.3;
-    const a = 0.014 + rand() * 0.024;
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-    g.addColorStop(0, `rgba(${warm ? "228,214,200" : "196,210,238"},${a.toFixed(3)})`);
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
-  }
-  ctx.globalCompositeOperation = "destination-out";
-  for (let i = 0; i < 12; i++) {
-    const t = 0.15 + rand() * 0.7;
-    const cx = t * W;
-    const cy = bandCentre(t) * H + (rand() - 0.5) * 0.04 * H;
-    const radius = (0.02 + rand() * 0.04) * Math.max(W, H);
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-    g.addColorStop(0, `rgba(0,0,0,${(0.25 + rand() * 0.3).toFixed(2)})`);
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
-  }
-  ctx.globalCompositeOperation = "source-over";
-  return off;
-}
-
-type Silhouette = {
-  layer: HTMLCanvasElement;
-  windows: { x: number; y: number; r: number }[];
-};
 
 function paintSilhouette(W: number, H: number, horizonY: number): Silhouette {
   const off = document.createElement("canvas");
@@ -161,7 +173,6 @@ function paintSilhouette(W: number, H: number, horizonY: number): Silhouette {
   ctx.beginPath();
   ctx.moveTo(0, H);
   ctx.lineTo(0, horizonY);
-  // Treeline: a jittery walk with occasional soft bumps
   let x = 0;
   let y = horizonY;
   while (x < W) {
@@ -177,7 +188,6 @@ function paintSilhouette(W: number, H: number, horizonY: number): Silhouette {
   ctx.lineTo(W, H);
   ctx.closePath();
   ctx.fill();
-  // A small clustered skyline at the centre: the glow has a source
   const windows: Silhouette["windows"] = [];
   const buildings = 4 + Math.floor(rand() * 2);
   let bx = W * 0.38;
@@ -200,33 +210,74 @@ function paintSilhouette(W: number, H: number, horizonY: number): Silhouette {
   return { layer: off, windows };
 }
 
-/** Lerp between the pristine and inner-city colour for one gradient stop. */
 function lerpRgb(from: [number, number, number], to: [number, number, number], g: number): string {
   const c = from.map((f, i) => Math.round(f + (to[i] - f) * g));
   return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+/** Checklist status for a named feature at this latitude and evening. */
+function featureStatus(
+  label: string,
+  minMpsas: number,
+  mpsas: number,
+  objects: PlacedObject[] | null,
+  lat: number
+): { symbol: string; note: string; dimmed: boolean } {
+  const ids: Record<string, string> = {
+    "The Milky Way": "",
+    "The Andromeda galaxy with the naked eye": "m31",
+    "The Orion Nebula as a fuzzy glow": "m42",
+    "All seven stars of the Plough": "plough",
+  };
+  const obj = objects?.find((o) => o.id === ids[label]);
+  if (obj) {
+    const maxAlt = 90 - Math.abs(lat - obj.dec);
+    if (maxAlt < 4)
+      return { symbol: "—", note: "never rises at this latitude", dimmed: true };
+    if (obj.alt < 3)
+      return { symbol: "—", note: "below the horizon this evening", dimmed: true };
+    if (mpsas >= minMpsas)
+      return { symbol: "✓", note: `${compassWord(obj.az)}`, dimmed: false };
+    return { symbol: "✕", note: "lost", dimmed: true };
+  }
+  return mpsas >= minMpsas
+    ? { symbol: "✓", note: "", dimmed: false }
+    : { symbol: "✕", note: "lost", dimmed: true };
 }
 
 export function SkySimulator({
   initialMpsas,
   cityName,
   series,
+  lat,
   onClose,
 }: {
   initialMpsas?: number;
   cityName?: string;
   /** Per-year mpsas values aligned with ATLAS_YEARS (from sky-quality.json) */
   series?: (number | null)[];
+  /** Viewer latitude; shapes which sky is overhead. Defaults to 45N. */
+  lat?: number;
   onClose: () => void;
 }) {
   const clamp = (v: number) => Math.min(Math.max(v, MPSAS_MIN), MPSAS_MAX);
+  const viewerLat = Math.min(84, Math.max(-84, lat ?? 45));
   const [mpsas, setMpsas] = useState(() => clamp(initialMpsas ?? 21.9));
   const [activeYear, setActiveYear] = useState<number | null>(() =>
     initialMpsas !== undefined && series ? ATLAS_YEARS[ATLAS_YEARS.length - 1] : null
   );
+  const [guides, setGuides] = useState(true);
+  const initialFacing = viewerLat >= -10 ? 180 : 0;
+  const [facingWord, setFacingWord] = useState(compassWord(initialFacing));
+  const [skyReady, setSkyReady] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const targetRef = useRef(mpsas);
   targetRef.current = mpsas;
+  const guidesRef = useRef(guides);
+  guidesRef.current = guides;
+  const azRef = useRef(initialFacing);
+  const skyRef = useRef<SkyData | null>(null);
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -237,58 +288,197 @@ export function SkySimulator({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Canvas engine: offscreens built per size, repainted per frame (twinkle +
-  // eased transitions) or once per change under reduced motion.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     let raf = 0;
-    let stars: SimStar[] = [];
-    let milkyWay: HTMLCanvasElement | null = null;
     let silhouette: Silhouette | null = null;
     let W = 0;
     let H = 0;
     let horizonY = 0;
-    let disp = targetRef.current; // displayed mpsas eases toward the target
+    let pxPerDegY = 1;
+    let pxPerDegX = 1;
+    let disp = targetRef.current;
+    let disposed = false;
+
+    const xFor = (az: number) => W / 2 + wrap180(az - azRef.current) * pxPerDegX;
+    const yFor = (alt: number) => horizonY - (alt / MAX_ALT) * (horizonY - 0.02 * H);
+
+    const drawObjects = (ctx: CanvasRenderingContext2D, wash: number) => {
+      const sky = skyRef.current;
+      if (!sky) return;
+      for (const o of sky.objects) {
+        if (o.alt < 2) continue;
+        const x = xFor(o.az);
+        if (x < -60 || x > W + 60) continue;
+        const y = yFor(o.alt);
+        const gate = smoothstep(o.minMpsas - 0.6, o.minMpsas + 0.9, disp) * wash * horizonDim(o.alt);
+        if (gate <= 0.02) continue;
+        const dppx = pxPerDegX;
+        if (o.kind === "galaxy") {
+          // M31: an inclined spindle of soft light
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(-0.6);
+          ctx.scale(1, 0.38);
+          const r = 1.7 * dppx;
+          const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+          g.addColorStop(0, `rgba(235,225,215,${(0.5 * gate).toFixed(3)})`);
+          g.addColorStop(0.4, `rgba(215,205,200,${(0.22 * gate).toFixed(3)})`);
+          g.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = g;
+          ctx.fillRect(-r, -r, r * 2, r * 2);
+          ctx.restore();
+        } else if (o.kind === "nebula") {
+          const r = (o.id === "carina" ? 1.4 : 0.9) * dppx;
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+          const tint = o.id === "m42" ? "252,204,212" : "240,220,200";
+          g.addColorStop(0, `rgba(${tint},${(0.55 * gate).toFixed(3)})`);
+          g.addColorStop(0.5, `rgba(190,205,230,${(0.2 * gate).toFixed(3)})`);
+          g.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = g;
+          ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        } else if (o.kind === "cluster") {
+          const r = 1.1 * dppx;
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+          g.addColorStop(0, `rgba(185,205,245,${(0.28 * gate).toFixed(3)})`);
+          g.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = g;
+          ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        }
+      }
+    };
+
+    const drawGuides = (ctx: CanvasRenderingContext2D, wash: number) => {
+      const sky = skyRef.current;
+      if (!sky || !guidesRef.current) return;
+      // Constellation figures
+      ctx.strokeStyle = `rgba(140,170,215,${(0.3 * wash).toFixed(3)})`;
+      ctx.lineWidth = Math.max(1, 0.6 * (dpr / 2 + 0.5));
+      ctx.beginPath();
+      for (const s of sky.segments) {
+        const x1 = xFor(s.az1);
+        const x2 = xFor(s.az2);
+        if ((x1 < 0 && x2 < 0) || (x1 > W && x2 > W)) continue;
+        if (Math.abs(x1 - x2) > W) continue;
+        ctx.moveTo(x1, yFor(s.alt1));
+        ctx.lineTo(x2, yFor(s.alt2));
+      }
+      ctx.stroke();
+      // Labels for the showpieces that are up and surviving the sky
+      ctx.font = `${Math.round(11 * (dpr / 2 + 0.5) * 2) / 2 + 6}px system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      for (const o of sky.objects) {
+        if (o.alt < 4) continue;
+        const gate = smoothstep(o.minMpsas - 0.6, o.minMpsas + 0.9, disp);
+        if (gate < 0.25) continue;
+        const x = xFor(o.az);
+        if (x < 30 || x > W - 30) continue;
+        const y = yFor(o.alt);
+        const a = (0.75 * gate * wash).toFixed(3);
+        ctx.strokeStyle = `rgba(170,190,220,${(0.4 * gate * wash).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.moveTo(x, y - 14 * (dpr / 2 + 0.5));
+        ctx.lineTo(x, y - 26 * (dpr / 2 + 0.5));
+        ctx.stroke();
+        ctx.fillStyle = `rgba(190,205,228,${a})`;
+        ctx.fillText(o.label, x, y - 32 * (dpr / 2 + 0.5));
+      }
+    };
 
     const paint = (time?: number) => {
       const ctx = canvas.getContext("2d");
-      if (!ctx || !silhouette || !milkyWay) return;
+      if (!ctx || !silhouette) return;
       const t = Math.min(Math.max((MPSAS_MAX - disp) / 5.5, 0), 1);
       const g = Math.pow(t, GLOW_EASE);
       const limit = nelm(disp);
+      const wash = 1 - 0.35 * t;
 
-      // Sky: vertical gradient from zenith to horizon
-      const sky = ctx.createLinearGradient(0, 0, 0, horizonY);
-      sky.addColorStop(0, lerpRgb([6, 10, 20], [44, 37, 28], g));
-      sky.addColorStop(0.62, lerpRgb([10, 15, 28], [98, 71, 44], g));
-      sky.addColorStop(1, lerpRgb([17, 23, 37], [182, 122, 58], g));
-      ctx.fillStyle = sky;
+      // Sky gradient, zenith to horizon
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
+      skyGrad.addColorStop(0, lerpRgb([5, 8, 17], [44, 37, 28], g));
+      skyGrad.addColorStop(0.62, lerpRgb([9, 13, 25], [98, 71, 44], g));
+      skyGrad.addColorStop(1, lerpRgb([16, 21, 34], [182, 122, 58], g));
+      ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, W, H);
 
-      // Milky Way
+      const sky = skyRef.current;
+
+      // Milky Way window from the pre-rendered 360-degree strip
       const mw = smoothstep(MW_FADE[0], MW_FADE[1], disp);
-      if (mw > 0) {
+      if (sky && mw > 0) {
+        const { strip, stripPxPerDeg } = sky;
+        const winDeg = W / pxPerDegX;
+        let sx = ((azRef.current - winDeg / 2) * stripPxPerDeg) % strip.width;
+        if (sx < 0) sx += strip.width;
+        const sw = winDeg * stripPxPerDeg;
+        const dy = 0.02 * H; // align alt range with the star projection
+        const dh = horizonY - dy;
         ctx.globalAlpha = mw;
-        ctx.drawImage(milkyWay, 0, 0);
+        if (sx + sw <= strip.width) {
+          ctx.drawImage(strip, sx, 0, sw, strip.height, 0, dy, W, dh);
+        } else {
+          const first = strip.width - sx;
+          const firstW = (first / sw) * W;
+          ctx.drawImage(strip, sx, 0, first, strip.height, 0, dy, firstW, dh);
+          ctx.drawImage(strip, 0, 0, sw - first, strip.height, firstW, dy, W - firstW, dh);
+        }
         ctx.globalAlpha = 1;
       }
 
-      // Stars, thinned by the naked-eye limit and washed by sky brightness
-      const wash = 1 - 0.35 * t;
-      for (const st of stars) {
-        const vis = Math.min(Math.max((limit - st.mag) / STAR_FADE_MAG, 0), 1);
-        if (vis <= 0) continue;
-        let a = st.baseAlpha * vis * wash;
-        if (st.twinkle && time !== undefined)
-          a *= 0.7 + 0.3 * Math.sin(time * 0.0009 * st.speed + st.phase);
-        ctx.beginPath();
-        ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${st.colour},${a.toFixed(3)})`;
-        ctx.fill();
+      // Deep sky objects beneath the stars
+      drawObjects(ctx, wash);
+
+      // Stars: real catalogue, real extinction, photo bloom on the brightest
+      if (sky) {
+        for (const st of sky.stars) {
+          if (st.alt < 0) continue;
+          const vis = Math.min(Math.max((limit - st.mag) / STAR_FADE_MAG, 0), 1);
+          if (vis <= 0) continue;
+          const x = xFor(st.az);
+          if (x < -12 || x > W + 12) continue;
+          const y = yFor(st.alt);
+          let a = (0.18 + 0.82 * vis) * vis * wash * horizonDim(st.alt);
+          if (st.twinkle && time !== undefined)
+            a *= 0.75 + 0.25 * Math.sin(time * 0.0012 * st.speed + st.phase);
+          const b = Math.min(Math.max((6.7 - st.mag) / 7, 0), 1);
+          const r = (0.4 + 2.6 * b * b) * (dpr / 2 + 0.5);
+          if (st.mag < 1.6) {
+            // Bloom + subtle diffraction spikes: the photo look
+            const halo = r * 5;
+            const hg = ctx.createRadialGradient(x, y, 0, x, y, halo);
+            hg.addColorStop(0, `rgba(${st.colour},${(a * 0.55).toFixed(3)})`);
+            hg.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = hg;
+            ctx.fillRect(x - halo, y - halo, halo * 2, halo * 2);
+            ctx.strokeStyle = `rgba(${st.colour},${(a * 0.3).toFixed(3)})`;
+            ctx.lineWidth = Math.max(1, r * 0.22);
+            ctx.beginPath();
+            ctx.moveTo(x - halo, y);
+            ctx.lineTo(x + halo, y);
+            ctx.moveTo(x, y - halo);
+            ctx.lineTo(x, y + halo);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${st.colour},${Math.min(1, a * 1.2).toFixed(3)})`;
+            ctx.fill();
+          } else if (r > 1.4) {
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${st.colour},${a.toFixed(3)})`;
+            ctx.fill();
+          } else {
+            const s = Math.max(1, r * 1.7);
+            ctx.fillStyle = `rgba(${st.colour},${a.toFixed(3)})`;
+            ctx.fillRect(x - s / 2, y - s / 2, s, s);
+          }
+        }
       }
+
+      drawGuides(ctx, wash);
 
       // City glow domes above the horizon
       const dome = ctx.createRadialGradient(
@@ -310,7 +500,7 @@ export function SkySimulator({
         ctx.fillRect(0, 0, W, H);
       }
 
-      // Ground silhouette, then its windows lighting up with pollution
+      // Ground, then its windows lighting up with pollution
       ctx.drawImage(silhouette.layer, 0, 0);
       if (t > 0.05) {
         ctx.fillStyle = `rgba(255,190,120,${(0.55 * t).toFixed(3)})`;
@@ -328,11 +518,20 @@ export function SkySimulator({
       canvas.width = W;
       canvas.height = H;
       horizonY = 0.86 * H;
-      stars = buildStars(W, H, horizonY);
-      milkyWay = paintMilkyWay(W, H);
+      pxPerDegY = (horizonY - 0.02 * H) / MAX_ALT;
+      // Match vertical scale where possible; clamp the field of view so
+      // narrow screens still see enough sky and wide ones are not absurd
+      pxPerDegX = Math.max(W / 220, Math.min(W / 100, pxPerDegY));
       silhouette = paintSilhouette(W, H, horizonY);
       paint();
     };
+
+    buildSkyData(viewerLat).then((data) => {
+      if (disposed) return;
+      skyRef.current = data;
+      setSkyReady(true);
+      paint();
+    });
 
     const ro = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
@@ -341,11 +540,32 @@ export function SkySimulator({
     ro.observe(canvas);
     if (canvas.offsetWidth) build(canvas.offsetWidth, canvas.offsetHeight);
 
+    // Drag to look around the horizon
+    let dragging = false;
+    let lastX = 0;
+    const onDown = (e: PointerEvent) => {
+      dragging = true;
+      lastX = e.clientX;
+      canvas.setPointerCapture(e.pointerId);
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!dragging) return;
+      const dx = (e.clientX - lastX) * dpr;
+      lastX = e.clientX;
+      azRef.current = ((azRef.current - dx / pxPerDegX) % 360 + 360) % 360;
+      setFacingWord(compassWord(azRef.current));
+      paint();
+    };
+    const onUp = () => {
+      dragging = false;
+    };
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("pointercancel", onUp);
+
     let lastRaf = 0;
     if (!reduced) {
-      // No document.hidden gate: browsers already stop rAF in hidden tabs,
-      // and gating breaks embedded webviews that report hidden while visible.
-      // Time-based ease so the transition speed is frame-rate independent.
       let lastTime = 0;
       const tick = (time: number) => {
         lastRaf = performance.now();
@@ -370,11 +590,17 @@ export function SkySimulator({
     canvas.addEventListener("sky-repaint", repaintNow);
 
     return () => {
+      disposed = true;
       ro.disconnect();
       cancelAnimationFrame(raf);
       canvas.removeEventListener("sky-repaint", repaintNow);
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointercancel", onUp);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewerLat]);
 
   const setSky = useCallback((v: number, year: number | null) => {
     setMpsas(v);
@@ -383,11 +609,18 @@ export function SkySimulator({
     canvasRef.current?.dispatchEvent(new Event("sky-repaint"));
   }, []);
 
+  const toggleGuides = useCallback(() => {
+    setGuides((g) => {
+      guidesRef.current = !g;
+      return !g;
+    });
+    canvasRef.current?.dispatchEvent(new Event("sky-repaint"));
+  }, []);
+
   const band = bandFor(mpsas);
   const limit = nelm(mpsas);
   const starCount = starsAboveHorizon(limit);
 
-  // Historical delta line: first year with data vs the most recent
   const yearsWithData: { year: number; mpsas: number }[] = series
     ? ATLAS_YEARS.flatMap((y, i) =>
         series[i] === null || series[i] === undefined
@@ -407,7 +640,11 @@ export function SkySimulator({
       aria-label="Night sky simulator"
       className="fixed inset-0 z-[60] bg-black"
     >
-      <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 h-full w-full" />
+      <canvas
+        ref={canvasRef}
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full cursor-grab active:cursor-grabbing"
+      />
 
       <button
         ref={closeRef}
@@ -423,8 +660,12 @@ export function SkySimulator({
           {cityName ? `The night sky over ${cityName}` : "Night sky simulator"}
         </h2>
         <p className="text-sm text-[#c3c2b7]">
-          Drag the slider to see what light pollution takes away.
+          The real sky for this latitude on a clear January evening. Drag to
+          look around · facing {facingWord}.
         </p>
+        {!skyReady && (
+          <p className="mt-1 text-xs text-[#898781]">Loading the stars…</p>
+        )}
       </div>
 
       <div className="absolute inset-x-0 bottom-0 z-10 mx-auto w-[min(720px,94%)] pb-4">
@@ -454,7 +695,20 @@ export function SkySimulator({
 
           <div aria-live="polite" className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
-              <div className="text-sm font-semibold text-white">{band.label}</div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-white">{band.label}</span>
+                <button
+                  onClick={toggleGuides}
+                  aria-pressed={guides}
+                  className={`rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
+                    guides
+                      ? "border-white/30 bg-white/10 text-white"
+                      : "border-white/10 text-[#898781] hover:text-[#c3c2b7]"
+                  }`}
+                >
+                  Constellations {guides ? "on" : "off"}
+                </button>
+              </div>
               <p className="mt-0.5 text-xs leading-snug text-[#c3c2b7]">{band.blurb}</p>
               <dl className="mt-2 space-y-1 text-xs text-[#898781]">
                 <div className="flex justify-between gap-3">
@@ -477,15 +731,17 @@ export function SkySimulator({
               </div>
               <ul className="mt-1.5 space-y-1 text-xs">
                 {SKY_FEATURES.map((f) => {
-                  const visible = mpsas >= f.minMpsas;
+                  const st = featureStatus(
+                    f.label,
+                    f.minMpsas,
+                    mpsas,
+                    skyRef.current?.objects ?? null,
+                    viewerLat
+                  );
                   return (
-                    <li
-                      key={f.label}
-                      className={visible ? "text-[#c3c2b7]" : "text-[#52514e]"}
-                    >
-                      {visible ? "✓ " : "✕ "}
-                      {f.label}
-                      {visible ? "" : " · lost"}
+                    <li key={f.label} className={st.dimmed ? "text-[#52514e]" : "text-[#c3c2b7]"}>
+                      {st.symbol} {f.label}
+                      {st.note ? ` · ${st.note}` : ""}
                     </li>
                   );
                 })}
@@ -533,8 +789,9 @@ export function SkySimulator({
           >
             Light Pollution Atlas 2024 (David J. Lorenz)
           </a>
-          , based on VIIRS satellite data from NASA/NOAA. The simulation approximates
-          a clear, moonless night.
+          , based on VIIRS satellite data from NASA/NOAA. Stars: Yale Bright Star
+          Catalogue · constellation figures after Stellarium/d3-celestial. The
+          simulation approximates a clear, moonless January evening.
         </p>
       </div>
     </div>

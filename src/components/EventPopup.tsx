@@ -64,6 +64,7 @@ export type MapEvent =
       capital: boolean;
       /** Zenith sky brightness (mag/arcsec^2, 2024 atlas); null if unknown */
       mpsas?: number | null;
+      lat?: number;
     }
   | {
       kind: "sky";
@@ -157,7 +158,7 @@ export function EventPopup({
   top: number;
   onClose: () => void;
   /** Opens the night sky simulator preset to a sky brightness value */
-  onOpenSky?: (mpsas: number, cityName?: string, cityKey?: string) => void;
+  onOpenSky?: (mpsas: number, cityName?: string, cityKey?: string, lat?: number) => void;
   /** Opens the in-app news headlines modal */
   onOpenNews?: (req: NewsRequest) => void;
 }) {
@@ -209,7 +210,7 @@ export function EventPopup({
           <div className="mt-3 flex flex-col gap-1.5 border-t border-white/10 pt-2.5 text-xs">
             {onOpenSky && event.mpsas !== null && (
               <button
-                onClick={() => onOpenSky(event.mpsas!)}
+                onClick={() => onOpenSky(event.mpsas!, undefined, undefined, event.lat)}
                 className="text-left text-[#6da7ec] hover:underline"
               >
                 See this sky →
@@ -259,7 +260,7 @@ export function EventPopup({
             {onOpenSky && event.mpsas !== null && event.mpsas !== undefined && (
               <button
                 onClick={() =>
-                  onOpenSky(event.mpsas!, event.name, `${event.iso3}/${event.name}`)
+                  onOpenSky(event.mpsas!, event.name, `${event.iso3}/${event.name}`, event.lat)
                 }
                 className="text-left text-[#6da7ec] hover:underline"
               >

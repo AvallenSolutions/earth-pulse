@@ -246,3 +246,18 @@ aurora, and major cities.
 - [x] Verified in browser (pristine vs inner-city skies, Tokyo popup + year
       chips, Black Marble Europe/Japan, night-mode land click, Svalbard
       message, story run); tsc + production build clean
+
+## Phase 7.9 — The real sky (16 Jul 2026, in progress)
+Requested: hyper-realistic skies. Background = the actual sky around the
+world; simulator = photo-real with real constellations (Andromeda, Orion
+Nebula, the Plough visible), reflecting each city's latitude.
+- [ ] scripts/build-stars.ts: real star catalogue (mag <= 6.5) + constellation
+      lines + notable objects -> public/data/stars.json + constellations.json
+- [ ] src/lib/celestial.ts: GST, alt/az, galactic coords, projections,
+      B-V colour, Milky Way density
+- [ ] Starfield: real catalogue behind the globe, correct sky region for the
+      view centre, rotates with pan; real Milky Way band
+- [ ] SkySimulator: real hemisphere for the city's latitude (canonical clear
+      winter evening), photo-style bright stars, real M31/M42/Plough drawn and
+      labelled, constellation lines toggle, latitude-aware checklist
+- [ ] Verify in browser + tsc + build + commit + push

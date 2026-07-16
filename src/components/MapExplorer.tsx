@@ -231,7 +231,7 @@ export function MapExplorer({
   const [nightOn, setNightOn] = useState(false);
   const nightOnRef = useRef(nightOn);
   const [skySim, setSkySim] = useState<
-    { mpsas: number; city?: string; series?: (number | null)[] } | null
+    { mpsas: number; city?: string; series?: (number | null)[]; lat?: number } | null
   >(null);
   const [newsModal, setNewsModal] = useState<NewsRequest | null>(null);
   const [hurricaneCount, setHurricaneCount] = useState<number | null>(null);
@@ -499,6 +499,7 @@ export function MapExplorer({
           p.mpsas === null || p.mpsas === undefined || p.mpsas === "null"
             ? null
             : Number(p.mpsas),
+        lat: Number(p.lat),
       });
     });
     // Night sky quality at a point: decode the light pollution atlas tile
@@ -1957,14 +1958,14 @@ export function MapExplorer({
 
   // Open the night sky simulator, with the city's 2016-2024 history when known
   const openSky = useCallback(
-    async (mpsas: number, cityName?: string, cityKey?: string) => {
+    async (mpsas: number, cityName?: string, cityKey?: string, lat?: number) => {
       setPopup(null);
       let series: (number | null)[] | undefined;
       if (cityKey) {
         const data = await fetchSkySeries();
         series = data.cities[cityKey];
       }
-      setSkySim({ mpsas, city: cityName, series });
+      setSkySim({ mpsas, city: cityName, series, lat });
     },
     []
   );
@@ -1998,7 +1999,9 @@ export function MapExplorer({
         </p>
       )}
       <button
-        onClick={() => setSkySim({ mpsas: 21.9 })}
+        onClick={() =>
+          setSkySim({ mpsas: 21.9, lat: mapRef.current?.getCenter().lat })
+        }
         className="-mx-1.5 block w-full rounded-lg px-1.5 py-1.5 text-left text-sm text-[#6da7ec] transition-colors hover:bg-white/5"
       >
         Night sky simulator →
@@ -2627,6 +2630,7 @@ export function MapExplorer({
           initialMpsas={skySim.mpsas}
           cityName={skySim.city}
           series={skySim.series}
+          lat={skySim.lat}
           onClose={() => setSkySim(null)}
         />
       )}
