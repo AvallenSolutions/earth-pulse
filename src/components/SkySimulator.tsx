@@ -17,10 +17,17 @@ import {
   compassWord,
   fetchConstellations,
   fetchStars,
+  gmstHours,
   kelvinToRgb,
   milkyWayBlobs,
   type SkyObject,
 } from "@/lib/celestial";
+import {
+  moonPosition,
+  planetPositions,
+  sunPosition,
+  type MoonState,
+} from "@/lib/ephemeris";
 
 /**
  * Full-screen night sky simulator, now the real sky: every star is a Yale
@@ -40,9 +47,18 @@ import {
 const MPSAS_MIN = 16.5;
 const MPSAS_MAX = 22.0;
 
-// Canonical evening: mid-January, 22:00 local mean time -> LST ~ 5.8h,
-// independent of longitude. Orion is near the meridian.
-const LST_HOURS = 5.8;
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** Canonical evening: the 15th of the month at 22:00. Treating local mean
+ *  time as UT makes the sky longitude-independent, so latitude plus month
+ *  fully determine the view. */
+function canonicalTime(month: number): number {
+  return Date.UTC(new Date().getUTCFullYear(), month, 15, 22, 0, 0);
+}
+
 const MAX_ALT = 85; // degrees of sky above the horizon shown
 
 // Tunable feel constants
@@ -64,10 +80,23 @@ type Segment = { az1: number; alt1: number; az2: number; alt2: number };
 
 type PlacedObject = SkyObject & { az: number; alt: number };
 
+type PlacedPlanet = {
+  name: string;
+  az: number;
+  alt: number;
+  mag: number;
+  colour: string;
+};
+
 type SkyData = {
   stars: SkyStar[];
   segments: Segment[];
   objects: PlacedObject[];
+  planets: PlacedPlanet[];
+  moon: (MoonState & { az: number; alt: number }) | null;
+  /** Sun altitude: above -18 and twilight starts washing the sky out */
+  sunAlt: number;
+  sunAz: number;
   /** 360-degree Milky Way strip, x = azimuth, y = altitude */
   strip: HTMLCanvasElement;
   stripPxPerDeg: number;
@@ -78,11 +107,13 @@ const wrap180 = (a: number) => ((a + 540) % 360) - 180;
 /** Atmospheric extinction: stars dim towards the horizon. */
 const horizonDim = (alt: number) => (alt < 15 ? 0.35 + 0.65 * (alt / 15) : 1);
 
-async function buildSkyData(lat: number): Promise<SkyData> {
+async function buildSkyData(lat: number, month: number): Promise<SkyData> {
   const [catalogue, constellations] = await Promise.all([
     fetchStars(),
     fetchConstellations(),
   ]);
+  const t = canonicalTime(month);
+  const LST_HOURS = gmstHours(t);
 
   const stars: SkyStar[] = [];
   for (const s of catalogue) {
@@ -117,6 +148,20 @@ async function buildSkyData(lat: number): Promise<SkyData> {
     return { ...o, alt, az };
   });
 
+  // The Solar System on this evening: bright planets, the Moon with its
+  // true phase, and the Sun (for twilight)
+  const planets: PlacedPlanet[] = planetPositions(t).map((p) => ({
+    name: p.name,
+    mag: p.mag,
+    colour: p.colour,
+    ...altAz(p.ra, p.dec, lat, LST_HOURS),
+  }));
+  const moonState = moonPosition(t);
+  const moonAltAz = altAz(moonState.ra, moonState.dec, lat, LST_HOURS);
+  const moon = moonAltAz.alt > -3 ? { ...moonState, ...moonAltAz } : null;
+  const sun = sunPosition(t);
+  const sunAA = altAz(sun.ra, sun.dec, lat, LST_HOURS);
+
   // Milky Way: pre-render the full 360-degree band once; frames blit a window
   const stripPxPerDeg = 4; // fixed working resolution, scaled on composite
   const strip = document.createElement("canvas");
@@ -146,7 +191,17 @@ async function buildSkyData(lat: number): Promise<SkyData> {
     }
   }
   sctx.globalCompositeOperation = "source-over";
-  return { stars, segments, objects, strip, stripPxPerDeg };
+  return {
+    stars,
+    segments,
+    objects,
+    planets,
+    moon,
+    sunAlt: sunAA.alt,
+    sunAz: sunAA.az,
+    strip,
+    stripPxPerDeg,
+  };
 }
 
 type Silhouette = {
@@ -250,6 +305,8 @@ export function SkySimulator({
   cityName,
   series,
   lat,
+  escape,
+  mine,
   onClose,
 }: {
   initialMpsas?: number;
@@ -258,6 +315,10 @@ export function SkySimulator({
   series?: (number | null)[];
   /** Viewer latitude; shapes which sky is overhead. Defaults to 45N. */
   lat?: number;
+  /** Nearest darker sky, from the find-my-sky search */
+  escape?: { km: number; direction: string; mpsas: number } | null;
+  /** Opened via find-my-sky: address the viewer directly */
+  mine?: boolean;
   onClose: () => void;
 }) {
   const clamp = (v: number) => Math.min(Math.max(v, MPSAS_MIN), MPSAS_MAX);
@@ -267,9 +328,13 @@ export function SkySimulator({
     initialMpsas !== undefined && series ? ATLAS_YEARS[ATLAS_YEARS.length - 1] : null
   );
   const [guides, setGuides] = useState(true);
+  const [month, setMonth] = useState(0);
   const initialFacing = viewerLat >= -10 ? 180 : 0;
   const [facingWord, setFacingWord] = useState(compassWord(initialFacing));
-  const [skyReady, setSkyReady] = useState(false);
+  // Bumped whenever the async sky rebuild lands, so the checklist and other
+  // JSX derived from skyRef re-render (a ref alone never re-renders)
+  const [skyVersion, setSkyVersion] = useState(0);
+  const skyReady = skyVersion > 0;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const targetRef = useRef(mpsas);
@@ -386,6 +451,20 @@ export function SkySimulator({
         ctx.fillStyle = `rgba(190,205,228,${a})`;
         ctx.fillText(o.label, x, y - 32 * (dpr / 2 + 0.5));
       }
+      // Planets and the Moon: name what people will actually notice
+      const solar: { label: string; az: number; alt: number }[] = [
+        ...sky.planets.filter((p) => p.alt > 1.5).map((p) => ({ label: p.name, az: p.az, alt: p.alt })),
+        ...(sky.moon && sky.moon.alt > 1.5
+          ? [{ label: `Moon · ${sky.moon.phaseName}`, az: sky.moon.az, alt: sky.moon.alt }]
+          : []),
+      ];
+      for (const s of solar) {
+        const x = xFor(s.az);
+        if (x < 30 || x > W - 30) continue;
+        const y = yFor(s.alt);
+        ctx.fillStyle = `rgba(190,205,228,${(0.7 * wash + 0.15).toFixed(3)})`;
+        ctx.fillText(s.label, x, y - 26 * (dpr / 2 + 0.5));
+      }
     };
 
     const paint = (time?: number) => {
@@ -394,20 +473,26 @@ export function SkySimulator({
       const t = Math.min(Math.max((MPSAS_MAX - disp) / 5.5, 0), 1);
       const g = Math.pow(t, GLOW_EASE);
       const limit = nelm(disp);
-      const wash = 1 - 0.35 * t;
+      const sky = skyRef.current;
+      // Twilight: at high latitudes in summer the Sun never drops far enough
+      // for real darkness, and the sky says so
+      const tw = sky ? smoothstep(-18, -6, sky.sunAlt) : 0;
+      const wash = (1 - 0.35 * t) * (1 - 0.8 * tw);
 
       // Sky gradient, zenith to horizon
+      const mix = (dark: [number, number, number], glow: [number, number, number], twi: [number, number, number]) => {
+        const base = dark.map((d, i) => d + (glow[i] - d) * g) as [number, number, number];
+        return lerpRgb(base, twi, tw * 0.85);
+      };
       const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
-      skyGrad.addColorStop(0, lerpRgb([5, 8, 17], [44, 37, 28], g));
-      skyGrad.addColorStop(0.62, lerpRgb([9, 13, 25], [98, 71, 44], g));
-      skyGrad.addColorStop(1, lerpRgb([16, 21, 34], [182, 122, 58], g));
+      skyGrad.addColorStop(0, mix([5, 8, 17], [44, 37, 28], [30, 48, 88]));
+      skyGrad.addColorStop(0.62, mix([9, 13, 25], [98, 71, 44], [62, 92, 146]));
+      skyGrad.addColorStop(1, mix([16, 21, 34], [182, 122, 58], [128, 158, 198]));
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, W, H);
 
-      const sky = skyRef.current;
-
       // Milky Way window from the pre-rendered 360-degree strip
-      const mw = smoothstep(MW_FADE[0], MW_FADE[1], disp);
+      const mw = smoothstep(MW_FADE[0], MW_FADE[1], disp) * (1 - tw);
       if (sky && mw > 0) {
         const { strip, stripPxPerDeg } = sky;
         const winDeg = W / pxPerDegX;
@@ -478,6 +563,80 @@ export function SkySimulator({
         }
       }
 
+      // The bright planets: they survive city skies long after the stars go
+      if (sky) {
+        for (const p of sky.planets) {
+          if (p.alt < 0.5) continue;
+          const x = xFor(p.az);
+          if (x < -12 || x > W + 12) continue;
+          const y = yFor(p.alt);
+          const vis = Math.min(Math.max((limit - p.mag) / STAR_FADE_MAG, 0), 1);
+          if (vis <= 0) continue;
+          const a = (0.3 + 0.7 * vis) * (1 - 0.15 * t) * horizonDim(p.alt) * (1 - 0.5 * tw);
+          const b = Math.min(Math.max((6.7 - p.mag) / 7, 0), 1);
+          const r = (0.5 + 2.6 * b * b) * (dpr / 2 + 0.5);
+          const halo = r * 4.5;
+          const hg = ctx.createRadialGradient(x, y, 0, x, y, halo);
+          hg.addColorStop(0, `rgba(${p.colour},${(a * 0.5).toFixed(3)})`);
+          hg.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = hg;
+          ctx.fillRect(x - halo, y - halo, halo * 2, halo * 2);
+          if (p.mag < -1) {
+            ctx.strokeStyle = `rgba(${p.colour},${(a * 0.3).toFixed(3)})`;
+            ctx.lineWidth = Math.max(1, r * 0.22);
+            ctx.beginPath();
+            ctx.moveTo(x - halo, y);
+            ctx.lineTo(x + halo, y);
+            ctx.moveTo(x, y - halo);
+            ctx.lineTo(x, y + halo);
+            ctx.stroke();
+          }
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${p.colour},${Math.min(1, a * 1.2).toFixed(3)})`;
+          ctx.fill();
+        }
+
+        // The Moon with its true phase (drawn about twice its real size so
+        // the phase reads at panorama scale)
+        if (sky.moon && sky.moon.alt > 0) {
+          const x = xFor(sky.moon.az);
+          if (x > -40 && x < W + 40) {
+            const y = yFor(sky.moon.alt);
+            const R = 1.05 * pxPerDegX;
+            const k = sky.moon.illuminated;
+            const glowR = R * (2 + 3 * k);
+            const mg = ctx.createRadialGradient(x, y, R * 0.8, x, y, glowR);
+            mg.addColorStop(0, `rgba(225,232,245,${(0.28 * k + 0.04).toFixed(3)})`);
+            mg.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = mg;
+            ctx.fillRect(x - glowR, y - glowR, glowR * 2, glowR * 2);
+            // Dark side first (earthshine), then the lit shape
+            ctx.beginPath();
+            ctx.arc(x, y, R, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(78,84,96,0.5)";
+            ctx.fill();
+            const sunSide = wrap180(sky.sunAz - sky.moon.az) > 0 ? 1 : -1;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x, y, R, 0, Math.PI * 2);
+            ctx.clip();
+            const lit = "rgba(238,240,234,0.96)";
+            ctx.beginPath();
+            if (sunSide > 0) ctx.arc(x, y, R, -Math.PI / 2, Math.PI / 2);
+            else ctx.arc(x, y, R, Math.PI / 2, (3 * Math.PI) / 2);
+            ctx.closePath();
+            ctx.fillStyle = lit;
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(x, y, R * Math.abs(2 * k - 1), R, 0, 0, Math.PI * 2);
+            ctx.fillStyle = k >= 0.5 ? lit : "rgba(78,84,96,0.9)";
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+      }
+
       drawGuides(ctx, wash);
 
       // City glow domes above the horizon
@@ -526,10 +685,10 @@ export function SkySimulator({
       paint();
     };
 
-    buildSkyData(viewerLat).then((data) => {
+    buildSkyData(viewerLat, month).then((data) => {
       if (disposed) return;
       skyRef.current = data;
-      setSkyReady(true);
+      setSkyVersion((v) => v + 1);
       paint();
     });
 
@@ -600,7 +759,7 @@ export function SkySimulator({
       canvas.removeEventListener("pointercancel", onUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewerLat]);
+  }, [viewerLat, month]);
 
   const setSky = useCallback((v: number, year: number | null) => {
     setMpsas(v);
@@ -620,6 +779,67 @@ export function SkySimulator({
   const band = bandFor(mpsas);
   const limit = nelm(mpsas);
   const starCount = starsAboveHorizon(limit);
+
+  // Postcard: composite the live canvas with a caption band and share it
+  const savePostcard = useCallback(() => {
+    const src = canvasRef.current;
+    if (!src || !src.width) return;
+    const out = document.createElement("canvas");
+    out.width = 1200;
+    out.height = 900;
+    const ctx = out.getContext("2d")!;
+    ctx.fillStyle = "#050508";
+    ctx.fillRect(0, 0, 1200, 900);
+    // Cover-fit the upper two thirds of the sky (the control card region is
+    // DOM, not canvas, so the canvas is clean sky + silhouette)
+    const usableH = src.height * 0.9;
+    const scale = Math.max(1200 / src.width, 770 / usableH);
+    const sw = 1200 / scale;
+    const sh = 770 / scale;
+    ctx.drawImage(src, (src.width - sw) / 2, 0, sw, sh, 0, 0, 1200, 770);
+    const fade = ctx.createLinearGradient(0, 700, 0, 780);
+    fade.addColorStop(0, "rgba(5,5,8,0)");
+    fade.addColorStop(1, "rgba(5,5,8,1)");
+    ctx.fillStyle = fade;
+    ctx.fillRect(0, 700, 1200, 80);
+    ctx.fillStyle = "#050508";
+    ctx.fillRect(0, 780, 1200, 120);
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "600 34px system-ui, sans-serif";
+    ctx.fillText(cityName ? `The night sky over ${cityName}` : "My night sky", 40, 806);
+    ctx.fillStyle = "#c3c2b7";
+    ctx.font = "21px system-ui, sans-serif";
+    ctx.fillText(
+      `${band.label} · about ${formatStarCount(starCount)} stars visible${activeYear ? ` · ${activeYear}` : ""} · a clear ${MONTHS[month]} evening`,
+      40, 842
+    );
+    ctx.fillStyle = "#898781";
+    ctx.font = "17px system-ui, sans-serif";
+    ctx.fillText("earth-pulse-alkatera.vercel.app · Light Pollution Atlas 2024 · Yale Bright Star Catalogue", 40, 874);
+    out.toBlob((blob) => {
+      if (!blob) return;
+      const slug = cityName ? `-${cityName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}` : "";
+      const file = new File([blob], `night-sky${slug}.png`, { type: "image/png" });
+      if (navigator.canShare?.({ files: [file] })) {
+        navigator.share({ files: [file], title: file.name }).catch(() => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = file.name;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 30_000);
+        });
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    }, "image/png");
+  }, [cityName, band, starCount, activeYear, month]);
 
   const yearsWithData: { year: number; mpsas: number }[] = series
     ? ATLAS_YEARS.flatMap((y, i) =>
@@ -657,11 +877,15 @@ export function SkySimulator({
 
       <div className="pointer-events-none absolute left-4 top-4 z-10">
         <h2 className="text-lg font-semibold tracking-tight text-white">
-          {cityName ? `The night sky over ${cityName}` : "Night sky simulator"}
+          {mine
+            ? "Your night sky"
+            : cityName
+              ? `The night sky over ${cityName}`
+              : "Night sky simulator"}
         </h2>
         <p className="text-sm text-[#c3c2b7]">
-          The real sky for this latitude on a clear January evening. Drag to
-          look around · facing {facingWord}.
+          The real sky for this latitude on a clear {MONTHS[month]} evening.
+          Drag to look around · facing {facingWord}.
         </p>
         {!skyReady && (
           <p className="mt-1 text-xs text-[#898781]">Loading the stars…</p>
@@ -697,17 +921,25 @@ export function SkySimulator({
             <div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-white">{band.label}</span>
-                <button
-                  onClick={toggleGuides}
-                  aria-pressed={guides}
-                  className={`rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
-                    guides
-                      ? "border-white/30 bg-white/10 text-white"
-                      : "border-white/10 text-[#898781] hover:text-[#c3c2b7]"
-                  }`}
-                >
-                  Constellations {guides ? "on" : "off"}
-                </button>
+                <span className="flex gap-1">
+                  <button
+                    onClick={toggleGuides}
+                    aria-pressed={guides}
+                    className={`rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
+                      guides
+                        ? "border-white/30 bg-white/10 text-white"
+                        : "border-white/10 text-[#898781] hover:text-[#c3c2b7]"
+                    }`}
+                  >
+                    Constellations {guides ? "on" : "off"}
+                  </button>
+                  <button
+                    onClick={savePostcard}
+                    className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-[#898781] transition-colors hover:border-white/20 hover:text-white"
+                  >
+                    Save image ↓
+                  </button>
+                </span>
               </div>
               <p className="mt-0.5 text-xs leading-snug text-[#c3c2b7]">{band.blurb}</p>
               <dl className="mt-2 space-y-1 text-xs text-[#898781]">
@@ -724,6 +956,30 @@ export function SkySimulator({
                   <dd className="tabular-nums text-[#c3c2b7]">{mpsas.toFixed(1)} mag/arcsec²</dd>
                 </div>
               </dl>
+              <div className="mt-3">
+                <div className="flex justify-between text-[10px] text-[#898781]">
+                  <span className="font-semibold uppercase tracking-wider">Time of year</span>
+                  <span className="text-[#c3c2b7]">{MONTHS[month]} · 10pm</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={11}
+                  step={1}
+                  value={month}
+                  onChange={(e) => setMonth(Number(e.target.value))}
+                  aria-label="Month of the year"
+                  aria-valuetext={MONTHS[month]}
+                  className="ep-slider mt-1 w-full"
+                />
+              </div>
+              {escape && (
+                <p className="mt-3 rounded-lg border border-[#2dbe78]/20 bg-[#2dbe78]/5 p-2 text-xs leading-snug text-[#9fd8b4]">
+                  Darker sky: about {escape.km} km to the {escape.direction} the
+                  sky reaches {escape.mpsas.toFixed(1)} mag/arcsec², roughly{" "}
+                  {formatStarCount(starsAboveHorizon(nelm(escape.mpsas)))} stars.
+                </p>
+              )}
             </div>
             <div>
               <div className="text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
@@ -790,8 +1046,9 @@ export function SkySimulator({
             Light Pollution Atlas 2024 (David J. Lorenz)
           </a>
           , based on VIIRS satellite data from NASA/NOAA. Stars: Yale Bright Star
-          Catalogue · constellation figures after Stellarium/d3-celestial. The
-          simulation approximates a clear, moonless January evening.
+          Catalogue · constellation figures after Stellarium/d3-celestial. Moon
+          and planets are computed for the shown evening (Moon drawn about twice
+          its true size; moonlight brightening is not modelled).
         </p>
       </div>
     </div>

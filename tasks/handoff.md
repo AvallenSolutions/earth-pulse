@@ -2,6 +2,30 @@
 Updated: 2026-07-16 (evening) | Branch: main (in sync with origin) | Dev port: 3300
 Remote: https://github.com/AvallenSolutions/earth-pulse (private)
 
+## Latest: Phase 8.0 — sky pack (pushed)
+Five features on top of the real-sky engine:
+1. src/lib/ephemeris.ts: Sun/Moon/planets (JPL Keplerian elements + Meeus
+   moon). Sun dec verified against the ISS API's subsolar latitude.
+2. Simulator months: TIME OF YEAR slider, 12 canonical evenings (15th,
+   10pm, LST from real GMST). Checklist is month-aware; twilight washes the
+   sky when the sun is above -18 deg (high-lat summers). skyVersion state
+   bumps re-renders when the async sky build lands (refs alone do not).
+3. Moon (true phase geometry, earthshine, drawn 2x size, labelled) and
+   planets (bloom, spikes, labels, real magnitudes) in the simulator.
+4. Save image: postcard PNG composite (sky + caption + URL), native share
+   when available. Find my sky: geolocation -> makeSkySampler (cached atlas
+   tiles) -> "Your night sky" + spiral search for nearest mpsas >= 21.2
+   (km + compass direction, green escape card in the simulator).
+5. Satellites: scripts/build-satellites.ts bakes CelesTrak SATCAT into
+   public/data/satellites.json (in-orbit per year, payloads vs debris;
+   52 in 1960 -> 34,240 in 2026). SatelliteSwarm.tsx renders real 3D
+   circular orbits orthographically around the globe disc (dots pass behind
+   the planet, GEO belt tilts with view latitude), driven by the year
+   slider: "Satellites in orbit" toggle in the History section. Live ISS
+   layer (wheretheiss.at, 10s poll, open CORS) with popup + NASA link.
+Verified in browser (1960 vs 2024 swarm, July galactic core, Jupiter
+labelled, ISS layer live). tsc + build clean.
+
 ## Latest: Phase 7.9 — the real sky (pushed)
 Both skies are now genuine astronomy. scripts/build-stars.ts bakes the Yale
 Bright Star Catalogue (8,404 stars, colour temperatures, names) and

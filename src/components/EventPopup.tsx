@@ -72,6 +72,12 @@ export type MapEvent =
       lon: number;
       /** null when the location is outside the atlas coverage (lat -65..+75) */
       mpsas: number | null;
+    }
+  | {
+      kind: "iss";
+      altitude: number;
+      velocity: number;
+      visibility: string;
     };
 
 const CAT_LABELS = [
@@ -175,7 +181,53 @@ export function EventPopup({
         ✕
       </button>
 
-      {event.kind === "sky" ? (
+      {event.kind === "iss" ? (
+        <>
+          <div className="pr-6 text-sm font-semibold text-white">
+            International Space Station
+          </div>
+          <div className="mt-0.5 text-xs text-[#c3c2b7]">
+            {event.visibility === "eclipsed"
+              ? "Currently in Earth's shadow"
+              : "Currently in sunlight"}
+          </div>
+          <dl className="mt-2 space-y-1 text-xs text-[#898781]">
+            <div className="flex justify-between">
+              <dt>Altitude</dt>
+              <dd className="tabular-nums text-[#c3c2b7]">
+                {Math.round(event.altitude)} km
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>Speed</dt>
+              <dd className="tabular-nums text-[#c3c2b7]">
+                {Math.round(event.velocity).toLocaleString("en-GB")} km/h
+              </dd>
+            </div>
+          </dl>
+          <div className="mt-3 flex flex-col gap-1.5 border-t border-white/10 pt-2.5 text-xs">
+            <a
+              href="https://spotthestation.nasa.gov"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[#6da7ec] hover:underline"
+            >
+              See it from your garden (NASA) →
+            </a>
+            <button
+              onClick={() =>
+                onOpenNews?.({
+                  query: "International Space Station",
+                  title: "News: the ISS",
+                })
+              }
+              className="text-left text-[#6da7ec] hover:underline"
+            >
+              News coverage →
+            </button>
+          </div>
+        </>
+      ) : event.kind === "sky" ? (
         <>
           <div className="pr-6 text-sm font-semibold text-white">
             The night sky here

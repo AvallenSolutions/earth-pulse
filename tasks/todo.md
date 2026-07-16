@@ -261,3 +261,28 @@ Nebula, the Plough visible), reflecting each city's latitude.
       winter evening), photo-style bright stars, real M31/M42/Plough drawn and
       labelled, constellation lines toggle, latitude-aware checklist
 - [ ] Verify in browser + tsc + build + commit + push
+
+## Phase 8.0 — Sky pack ✅ (16 Jul 2026)
+- [x] src/lib/ephemeris.ts: Sun (dec verified against the ISS API's subsolar
+      latitude to 0.01 deg), Moon (Meeus leading terms, phase + name),
+      planets (JPL Keplerian elements, magnitudes) all as RA/Dec
+- [x] Simulator month scrubber: 12 canonical evenings (15th, 10pm, LST from
+      real GMST); July shows the galactic core + Great Rift, checklist goes
+      month-aware ("below the horizon this evening") after a skyVersion
+      re-render fix; twilight wash for high-lat summers
+- [x] Moon drawn with true phase (crescent/gibbous geometry, earthshine,
+      2x size note) + planets with bloom/spikes and labels (Jupiter verified
+      labelled at its true position facing south-east in January)
+- [x] "Save image" postcard: canvas composite (sky + caption + site URL) ->
+      PNG download or native share
+- [x] Find my sky: geolocation -> cached-tile atlas sampler (makeSkySampler)
+      -> "Your night sky" + spiral search to the nearest mpsas >= 21.2 sky
+      (km + compass direction) shown as a green escape card
+- [x] Satellites: build-satellites.ts (CelesTrak SATCAT, Earth orbit,
+      launch/decay per year: 52 objects in 1960 -> 34,240 in 2026) ->
+      SatelliteSwarm canvas: real 3D circular orbits orthographically
+      projected, dots vanish behind the planet, GEO belt tilts with view
+      latitude, payloads vs debris coloured, grows with the year slider
+      (verified 1960 empty vs 2024 blizzard); live ISS layer (wheretheiss.at,
+      10s poll) with popup (altitude, speed, sunlight/shadow, NASA link)
+- [x] Verified in browser; tsc + production build clean

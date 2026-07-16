@@ -19,8 +19,10 @@ import { Starfield } from "./Starfield";
 import { GlobeAtmosphere } from "./GlobeAtmosphere";
 import { StoryPlayer } from "./StoryPlayer";
 import { SkySimulator } from "./SkySimulator";
+import { SatelliteSwarm, fetchSatCounts, OBJECTS_PER_DOT } from "./SatelliteSwarm";
 import { STORIES, type Story } from "@/lib/stories";
-import { atlasIndexFor, fetchSkyQuality } from "@/lib/sky";
+import { atlasIndexFor, fetchSkyQuality, makeSkySampler } from "@/lib/sky";
+import { compassWord } from "@/lib/celestial";
 
 /** Latest full GIBS imagery day (UTC yesterday). */
 function latestImageryDate(): string {
@@ -231,9 +233,20 @@ export function MapExplorer({
   const [nightOn, setNightOn] = useState(false);
   const nightOnRef = useRef(nightOn);
   const [skySim, setSkySim] = useState<
-    { mpsas: number; city?: string; series?: (number | null)[]; lat?: number } | null
+    {
+      mpsas: number;
+      city?: string;
+      series?: (number | null)[];
+      lat?: number;
+      escape?: { km: number; direction: string; mpsas: number } | null;
+      mine?: boolean;
+    } | null
   >(null);
   const [newsModal, setNewsModal] = useState<NewsRequest | null>(null);
+  const [satSwarmOn, setSatSwarmOn] = useState(false);
+  const [satCounts, setSatCounts] = useState<{ years: number[]; payloads: number[]; debris: number[] } | null>(null);
+  const [issOn, setIssOn] = useState(false);
+  const [findingSky, setFindingSky] = useState(false);
   const [hurricaneCount, setHurricaneCount] = useState<number | null>(null);
   const [stormsOn, setStormsOn] = useState(false);
   const [stormCats, setStormCats] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
@@ -502,6 +515,16 @@ export function MapExplorer({
         lat: Number(p.lat),
       });
     });
+    map.on("click", "iss", (e) => {
+      const p = e.features?.[0]?.properties;
+      if (!p) return;
+      popupAt(e, {
+        kind: "iss",
+        altitude: Number(p.altitude),
+        velocity: Number(p.velocity),
+        visibility: String(p.visibility),
+      });
+    });
     // Night sky quality at a point: decode the light pollution atlas tile
     // in-browser (fetched straight from its GitHub Pages host).
     const skyLookupAt = (e: maplibregl.MapMouseEvent) => {
@@ -529,7 +552,7 @@ export function MapExplorer({
     map.on("click", (e) => {
       const layers = [
         "country-fills", "quakes", "disasters", "storms", "quakehist", "dishist",
-        "hurricanes", "volcanoes", ...CITY_LAYER_IDS,
+        "hurricanes", "volcanoes", "iss", ...CITY_LAYER_IDS,
       ].filter((l) => map.getLayer(l));
       if (map.queryRenderedFeatures(e.point, { layers }).length > 0) return;
       // A click in space around the globe yields a lngLat that does not
@@ -538,7 +561,7 @@ export function MapExplorer({
       if (Math.hypot(back.x - e.point.x, back.y - e.point.y) > 2) return;
       skyLookupAt(e);
     });
-    for (const layer of ["quakes", "disasters", "storms", "quakehist", "dishist", "hurricanes", "volcanoes", ...CITY_LAYER_IDS]) {
+    for (const layer of ["quakes", "disasters", "storms", "quakehist", "dishist", "hurricanes", "volcanoes", "iss", ...CITY_LAYER_IDS]) {
       map.on("mouseenter", layer, () => {
         map.getCanvas().style.cursor = "pointer";
       });
@@ -547,7 +570,7 @@ export function MapExplorer({
       // event dots sit above countries; don't navigate through them
       const hits = map
         .queryRenderedFeatures(e.point, {
-          layers: ["quakes", "disasters", "storms", "quakehist", "dishist", "hurricanes", "volcanoes", ...CITY_LAYER_IDS].filter((l) => map.getLayer(l)),
+          layers: ["quakes", "disasters", "storms", "quakehist", "dishist", "hurricanes", "volcanoes", "iss", ...CITY_LAYER_IDS].filter((l) => map.getLayer(l)),
         })
         .length;
       if (hits > 0) return;
@@ -1523,6 +1546,85 @@ export function MapExplorer({
     };
   }, [volcanoesOn, mapReady]);
 
+  // The International Space Station, live. Position from wheretheiss.at
+  // (keyless, open CORS), polled every 10 seconds straight from the browser.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    let alive = true;
+    if (!issOn) {
+      for (const id of ["iss", "iss-halo"]) if (map.getLayer(id)) map.removeLayer(id);
+      if (map.getSource("iss")) map.removeSource("iss");
+      return;
+    }
+    const load = async () => {
+      try {
+        const res = await fetch("https://api.wheretheiss.at/v1/satellites/25544");
+        if (!res.ok) throw new Error(String(res.status));
+        const j = (await res.json()) as {
+          latitude: number; longitude: number; altitude: number;
+          velocity: number; visibility: string;
+        };
+        if (!alive || !mapRef.current) return;
+        const geojson = {
+          type: "FeatureCollection" as const,
+          features: [{
+            type: "Feature" as const,
+            properties: {
+              altitude: j.altitude,
+              velocity: j.velocity,
+              visibility: j.visibility,
+            },
+            geometry: { type: "Point" as const, coordinates: [j.longitude, j.latitude] },
+          }],
+        };
+        const src = map.getSource("iss") as maplibregl.GeoJSONSource | undefined;
+        if (src) {
+          src.setData(geojson);
+          return;
+        }
+        map.addSource("iss", {
+          type: "geojson",
+          data: geojson,
+          attribution: 'ISS: <a href="https://wheretheiss.at">wheretheiss.at</a>',
+        });
+        map.addLayer({
+          id: "iss-halo",
+          type: "circle",
+          source: "iss",
+          paint: {
+            "circle-radius": 14,
+            "circle-color": "#ffffff",
+            "circle-opacity": 0.12,
+            "circle-blur": 0.7,
+          },
+        });
+        map.addLayer({
+          id: "iss",
+          type: "circle",
+          source: "iss",
+          paint: {
+            "circle-radius": 5,
+            "circle-color": "#ffffff",
+            "circle-opacity": 0.95,
+            "circle-stroke-color": "#6da7ec",
+            "circle-stroke-width": 2,
+          },
+        });
+      } catch {
+        /* feed unavailable */
+      }
+    };
+    load();
+    const timer = setInterval(() => {
+      if (!document.hidden) load();
+    }, 10_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [issOn, mapReady]);
+
   // Aurora forecast oval (NOAA SWPC OVATION), drawn like the real thing:
   // three stacked heatmaps from the same grid; a wide violet fringe (the
   // high-altitude oxygen/nitrogen edge), the dominant green body, and a
@@ -1956,6 +2058,51 @@ export function MapExplorer({
     window.location.href = `/country/${c.iso3}`;
   }, []);
 
+  // Find my sky: geolocate, read the atlas for the visitor's own spot, then
+  // spiral outwards for the nearest genuinely darker sky
+  const findMySky = useCallback(() => {
+    if (!navigator.geolocation || findingSky) return;
+    setFindingSky(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        try {
+          const sample = makeSkySampler();
+          const here = await sample(lon, lat);
+          if (here === null) return;
+          let escape: { km: number; direction: string; mpsas: number } | null = null;
+          if (here < 21.2) {
+            outer: for (const km of [15, 30, 50, 75, 100, 140, 190, 250, 320]) {
+              for (let bearing = 0; bearing < 360; bearing += 30) {
+                const rad = km / 111.32;
+                const dLat = rad * Math.cos((bearing * Math.PI) / 180);
+                const dLon =
+                  (rad * Math.sin((bearing * Math.PI) / 180)) /
+                  Math.max(0.2, Math.cos((lat * Math.PI) / 180));
+                const m = await sample(lon + dLon, lat + dLat);
+                if (m !== null && m >= 21.2) {
+                  escape = { km, direction: compassWord(bearing), mpsas: m };
+                  break outer;
+                }
+              }
+            }
+          }
+          setSkySim({
+            mpsas: Math.round(here * 10) / 10,
+            lat,
+            escape,
+            mine: true,
+          });
+        } finally {
+          setFindingSky(false);
+        }
+      },
+      () => setFindingSky(false),
+      { timeout: 10_000, maximumAge: 600_000 }
+    );
+  }, [findingSky]);
+
   // Open the night sky simulator, with the city's 2016-2024 history when known
   const openSky = useCallback(
     async (mpsas: number, cityName?: string, cityKey?: string, lat?: number) => {
@@ -2005,6 +2152,13 @@ export function MapExplorer({
         className="-mx-1.5 block w-full rounded-lg px-1.5 py-1.5 text-left text-sm text-[#6da7ec] transition-colors hover:bg-white/5"
       >
         Night sky simulator →
+      </button>
+      <button
+        onClick={findMySky}
+        disabled={findingSky}
+        className="-mx-1.5 block w-full rounded-lg px-1.5 py-1.5 text-left text-sm text-[#6da7ec] transition-colors hover:bg-white/5 disabled:opacity-60"
+      >
+        {findingSky ? "Reading your sky…" : "Find my sky (uses your location) →"}
       </button>
       <div className="pt-1 text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
         Live now
@@ -2102,6 +2256,13 @@ export function MapExplorer({
           NOAA SWPC OVATION: the chance of visible aurora over the next hour.
         </p>
       )}
+      <LayerRow label="ISS (live)" dot="#ffffff" checked={issOn} onChange={setIssOn} />
+      {issOn && (
+        <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+          The International Space Station, updated every 10 seconds. Click it
+          for details.
+        </p>
+      )}
       <div className="mt-2 border-t border-white/10 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
         History · follows the year slider
       </div>
@@ -2158,6 +2319,29 @@ export function MapExplorer({
             USGS archive, 1900 onwards.
           </p>
         </>
+      )}
+      <LayerRow
+        label={`Satellites in orbit · ${year}`}
+        dot="#aacdff"
+        checked={satSwarmOn}
+        onChange={(v) => {
+          setSatSwarmOn(v);
+          if (v && !satCounts) fetchSatCounts().then(setSatCounts);
+        }}
+      />
+      {satSwarmOn && (
+        <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+          {(() => {
+            if (!satCounts || !satCounts.years.length) return "Loading the catalogue…";
+            const yi = Math.min(
+              Math.max(year - satCounts.years[0], 0),
+              satCounts.years.length - 1
+            );
+            const p = satCounts.payloads[yi];
+            const d = satCounts.debris[yi];
+            return `End of ${satCounts.years[yi]}: ${(p + d).toLocaleString("en-GB")} tracked objects in orbit (${p.toLocaleString("en-GB")} satellites, ${d.toLocaleString("en-GB")} rocket bodies and debris). One dot is about ${OBJECTS_PER_DOT} objects; orbits stylised, not to scale. Globe view only. Data: CelesTrak SATCAT. Press play to watch it grow.`;
+          })()}
+        </p>
       )}
       <LayerRow label={`Disasters · ${year}`} dot="#3987e5" checked={disHistOn} onChange={setDisHistOn} />
       {disHistOn && (
@@ -2238,6 +2422,9 @@ export function MapExplorer({
 
       {/* Atmospheric limb glow hugging the globe's edge */}
       <GlobeAtmosphere map={mapObj} on={globeOn} />
+
+      {/* Humanity's hardware in orbit, growing with the year slider */}
+      <SatelliteSwarm map={mapObj} on={satSwarmOn && globeOn} year={year} />
 
       {/* Header + mobile burger */}
       <div className="absolute left-3 top-3 z-30 flex items-center gap-2 lg:left-4 lg:top-4 lg:block">
@@ -2628,9 +2815,11 @@ export function MapExplorer({
       {skySim && (
         <SkySimulator
           initialMpsas={skySim.mpsas}
-          cityName={skySim.city}
+          cityName={skySim.mine ? undefined : skySim.city}
+          mine={skySim.mine}
           series={skySim.series}
           lat={skySim.lat}
+          escape={skySim.escape}
           onClose={() => setSkySim(null)}
         />
       )}

@@ -69,6 +69,34 @@ export async function fetchSkyQuality(
   return { ratio, mpsas: mpsasFromRatio(ratio) };
 }
 
+/** Point sampler that caches decoded tiles, for searches probing many
+ *  nearby points (the find-my-sky dark-sky search). */
+export function makeSkySampler(
+  year: number = ATLAS_YEARS[ATLAS_YEARS.length - 1]
+): (lon: number, lat: number) => Promise<number | null> {
+  const tiles = new Map<string, Promise<Int8Array | null>>();
+  return async (lon, lat) => {
+    const idx = atlasIndexFor(lon, lat);
+    if (!idx) return null;
+    const key = `${idx.tilex}_${idx.tiley}`;
+    if (!tiles.has(key)) {
+      tiles.set(
+        key,
+        fetch(atlasTileUrl(year, idx.tilex, idx.tiley))
+          .then(async (res) => {
+            if (!res.ok || !res.body) return null;
+            const stream = res.body.pipeThrough(new DecompressionStream("gzip"));
+            return new Int8Array(await new Response(stream).arrayBuffer());
+          })
+          .catch(() => null)
+      );
+    }
+    const bytes = await tiles.get(key)!;
+    if (!bytes) return null;
+    return mpsasFromRatio(decodeAtlasPoint(bytes, idx.ix, idx.iy));
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* What a sky brightness number means for a person looking up          */
 /* ------------------------------------------------------------------ */
