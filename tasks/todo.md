@@ -226,3 +226,23 @@ aurora, and major cities.
   OVATION grid as concentric rings near the poles. Fixed with per-point
   data-driven heatmap-radius scaled by sec(lat) (capped at 14).
 - Starfield hides entirely on the flat projection (map covers the viewport).
+
+## Phase 7.8 — Light pollution: "The vanishing night" ✅ (16 Jul 2026)
+- [x] src/lib/sky.ts: Lorenz atlas decoder (browser + Node), Schaefer NELM,
+      Hipparcos star counts, plain-English bands, feature-loss thresholds
+- [x] scripts/build-sky-quality.ts: 789 cities x 5 years (2016-2024) decoded
+      from cached atlas tiles; mpsas baked into cities.json (2024) and
+      sky-quality.json (36 KB series). London 17.4 / Tokyo 17.2 spot-checked
+      against the source atlas
+- [x] SkySimulator.tsx: full-screen canvas sky (honest magnitudes, Milky Way,
+      skyglow dome, silhouette with windows that light up), rtl slider with
+      band labels, star counter, feature checklist, per-city year chips with
+      a stars-lost delta line, reduced-motion + rAF-stall fallbacks
+- [x] Earth at Night layer (GIBS Black Marble, mutually exclusive with
+      satellite imagery) + "The vanishing night" story (5 steps)
+- [x] Popups: city Night sky row + "See what light pollution does" button;
+      click-anywhere sky popup (in-browser tile decode, native gunzip); land
+      clicks show sky in night mode; polar out-of-coverage message
+- [x] Verified in browser (pristine vs inner-city skies, Tokyo popup + year
+      chips, Black Marble Europe/Japan, night-mode land click, Svalbard
+      message, story run); tsc + production build clean

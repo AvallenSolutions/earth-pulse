@@ -5,7 +5,7 @@ export type StoryStep = {
   metric?: string;
   year: number;
   scenario?: ScenarioId;
-  layers?: { storms?: boolean; quakeHist?: boolean };
+  layers?: { storms?: boolean; quakeHist?: boolean; earthAtNight?: boolean };
   caption: string;
   holdMs: number;
 };
@@ -165,6 +165,49 @@ export const STORIES: Story[] = [
         caption:
           "Every fraction of a degree matters. The choices made this decade will shape the climate for centuries. The story is still being written.",
         holdMs: 6500,
+      },
+    ],
+  },
+  {
+    id: "night",
+    title: "The vanishing night",
+    tagline: "How artificial light is erasing the stars",
+    steps: [
+      {
+        camera: { center: [-74, 40], zoom: 3.4 },
+        year: 2024,
+        layers: { earthAtNight: true },
+        caption:
+          "This is Earth after dark. The east coast of the United States burns so brightly that most people living here have never seen the Milky Way.",
+        holdMs: 6000,
+      },
+      {
+        camera: { center: [31, 30], zoom: 4.2 },
+        year: 2024,
+        caption:
+          "The Nile delta, drawn in light. Nearly everyone on this river lives within sight of its glow; the desert either side stays dark.",
+        holdMs: 5500,
+      },
+      {
+        camera: { center: [127.5, 38.5], zoom: 4.5 },
+        year: 2024,
+        caption:
+          "The Korean peninsula at night: the South blazes, the North is almost black. Light maps wealth and politics as clearly as any border.",
+        holdMs: 5500,
+      },
+      {
+        camera: { center: [17, -23], zoom: 3.6 },
+        year: 2024,
+        caption:
+          "Namibia is one of the darkest places left on Earth. Skies like this, where the Milky Way casts a shadow, were everyone's a century ago.",
+        holdMs: 5500,
+      },
+      {
+        camera: { center: [10, 30], zoom: 2 },
+        year: 2024,
+        caption:
+          "Skyglow is rising by around 10 percent a year, faster than satellites once suggested. Click any city and choose 'See this sky' to watch what that means for the stars above it.",
+        holdMs: 7000,
       },
     ],
   },

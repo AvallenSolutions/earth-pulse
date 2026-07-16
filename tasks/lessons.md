@@ -67,3 +67,13 @@ Corrections and patterns to remember for this project. Reviewed at session start
 - **The map "load" event can lag many seconds behind first render** when GIBS
   tiles are slow. Overlays that must track the globe from the first frame
   need the map object at creation time (setMapObj in init), not at load.
+- **The embedded Browser pane can stop firing rAF entirely** (0 callbacks in
+  seconds), not just throttle it. Anything that must render at least once
+  needs a synchronous first paint plus a change-event fallback that snaps
+  when the loop is stalled (see SkySimulator's sky-repaint listener).
+- **Layer-scoped map click handlers are unreliable in the embedded pane**
+  (they depend on queryRenderedFeatures, which returns empty while tiles are
+  rAF-throttled). Retry after isStyleLoaded() is true, or verify via a
+  fallback path. In real browsers they are fine.
+- **The idle globe spin makes project-then-click flaky in verification**:
+  bump activity (hover) first, then project and click back to back.

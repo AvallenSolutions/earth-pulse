@@ -17,7 +17,9 @@ import { EventPopup, type MapEvent } from "./EventPopup";
 import { Starfield } from "./Starfield";
 import { GlobeAtmosphere } from "./GlobeAtmosphere";
 import { StoryPlayer } from "./StoryPlayer";
+import { SkySimulator } from "./SkySimulator";
 import { STORIES, type Story } from "@/lib/stories";
+import { atlasIndexFor, fetchSkyQuality } from "@/lib/sky";
 
 /** Latest full GIBS imagery day (UTC yesterday). */
 function latestImageryDate(): string {
@@ -33,7 +35,7 @@ const STORM_CATS = {
 /** Major cities (Natural Earth, pre-built static JSON). Fetched once. */
 type CityRec = {
   name: string; iso3: string; country: string; lon: number; lat: number;
-  pop: number; capital: boolean; tier: number;
+  pop: number; capital: boolean; tier: number; mpsas?: number | null;
 };
 let citiesData: Promise<{ cities: CityRec[] }> | null = null;
 function fetchCities() {
@@ -45,6 +47,16 @@ function fetchCities() {
 /** Per-tier reveal zooms: megacities always, large cities soon, rest zoomed in */
 const CITY_TIER_MINZOOM = [0, 2.2, 3.6];
 const CITY_LAYER_IDS = [0, 1, 2].flatMap((t) => [`cities-dot-${t}`, `cities-label-${t}`]);
+
+/** Per-city sky quality history (2016-2024), lazy-loaded for the simulator */
+type SkySeriesFile = { years: number[]; cities: Record<string, (number | null)[]> };
+let skySeriesData: Promise<SkySeriesFile> | null = null;
+function fetchSkySeries(): Promise<SkySeriesFile> {
+  skySeriesData ??= fetch("/data/sky-quality.json")
+    .then((r) => (r.ok ? r.json() : { years: [], cities: {} }))
+    .catch(() => ({ years: [], cities: {} }));
+  return skySeriesData;
+}
 
 const stormsCache = new Map<number, StormYear>();
 const quakeHistCache = new Map<number, { quakes: QuakeRec[] }>();
@@ -215,6 +227,11 @@ export function MapExplorer({
   const [volcanoesOn, setVolcanoesOn] = useState(false);
   const [auroraOn, setAuroraOn] = useState(false);
   const [citiesOn, setCitiesOn] = useState(true);
+  const [nightOn, setNightOn] = useState(false);
+  const nightOnRef = useRef(nightOn);
+  const [skySim, setSkySim] = useState<
+    { mpsas: number; city?: string; series?: (number | null)[] } | null
+  >(null);
   const [hurricaneCount, setHurricaneCount] = useState<number | null>(null);
   const [stormsOn, setStormsOn] = useState(false);
   const [stormCats, setStormCats] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
@@ -476,7 +493,47 @@ export function MapExplorer({
         country: String(p.country),
         pop: Number(p.pop),
         capital: p.capital === true || p.capital === "true",
+        mpsas:
+          p.mpsas === null || p.mpsas === undefined || p.mpsas === "null"
+            ? null
+            : Number(p.mpsas),
       });
+    });
+    // Night sky quality at a point: decode the light pollution atlas tile
+    // in-browser (fetched straight from its GitHub Pages host).
+    const skyLookupAt = (e: maplibregl.MapMouseEvent) => {
+      const { lng, lat } = e.lngLat;
+      if (!atlasIndexFor(lng, lat)) {
+        // Polar latitudes sit outside the atlas: say so rather than nothing
+        popupAt(e, { kind: "sky", lat, lon: lng, mpsas: null });
+        return;
+      }
+      fetchSkyQuality(lng, lat)
+        .then((q) => {
+          if (q && mapRef.current)
+            popupAt(e, {
+              kind: "sky",
+              lat,
+              lon: lng,
+              mpsas: Math.round(q.mpsas * 10) / 10,
+            });
+        })
+        .catch(() => {
+          /* atlas host unreachable: stay quiet */
+        });
+    };
+    // Clicks on open ocean (no country, no event dot) always offer the sky
+    map.on("click", (e) => {
+      const layers = [
+        "country-fills", "quakes", "disasters", "storms", "quakehist", "dishist",
+        "hurricanes", "volcanoes", ...CITY_LAYER_IDS,
+      ].filter((l) => map.getLayer(l));
+      if (map.queryRenderedFeatures(e.point, { layers }).length > 0) return;
+      // A click in space around the globe yields a lngLat that does not
+      // project back to the clicked pixel; ignore those
+      const back = map.project(e.lngLat);
+      if (Math.hypot(back.x - e.point.x, back.y - e.point.y) > 2) return;
+      skyLookupAt(e);
     });
     for (const layer of ["quakes", "disasters", "storms", "quakehist", "dishist", "hurricanes", "volcanoes", ...CITY_LAYER_IDS]) {
       map.on("mouseenter", layer, () => {
@@ -491,6 +548,12 @@ export function MapExplorer({
         })
         .length;
       if (hits > 0) return;
+      // In Earth at Night mode the map is about light: land clicks show the
+      // local night sky instead of navigating to the country page
+      if (nightOnRef.current) {
+        skyLookupAt(e);
+        return;
+      }
       const iso3 = e.features?.[0]?.properties.iso3;
       if (iso3) window.location.href = `/country/${iso3}`;
     });
@@ -525,6 +588,10 @@ export function MapExplorer({
   useEffect(() => {
     yearRef.current = year;
   }, [year]);
+
+  useEffect(() => {
+    nightOnRef.current = nightOn;
+  }, [nightOn]);
 
   // Does this metric have a monthly-resolution dataset? (self-discovering:
   // the ingest writes an index.json; a 404 simply means annual only)
@@ -620,13 +687,43 @@ export function MapExplorer({
         "country-fills"
       );
     }
-    map.setPaintProperty("country-fills", "fill-opacity", satOn ? 0 : 0.75);
+  }, [satOn, satDate, mapReady]);
+
+  // Earth at night (NASA Black Marble, keyless GIBS composite). The map's
+  // "night mode": city lights instead of daylight terrain.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    if (map.getLayer("night")) map.removeLayer("night");
+    if (map.getSource("night")) map.removeSource("night");
+    if (nightOn) {
+      map.addSource("night", {
+        type: "raster",
+        tiles: [
+          "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png",
+        ],
+        tileSize: 256,
+        maxzoom: 8,
+        attribution:
+          'Night lights: <a href="https://earthdata.nasa.gov/gibs">NASA Black Marble</a>',
+      });
+      map.addLayer({ id: "night", type: "raster", source: "night" }, "country-fills");
+    }
+  }, [nightOn, mapReady]);
+
+  // While any full-surface imagery is on, the choropleth steps aside but
+  // hover/click stay live through the invisible fills
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const imagery = satOn || nightOn;
+    map.setPaintProperty("country-fills", "fill-opacity", imagery ? 0 : 0.75);
     map.setPaintProperty(
       "country-borders",
       "line-color",
-      satOn ? "rgba(255,255,255,0.25)" : "rgba(5, 10, 18, 0.65)"
+      imagery ? "rgba(255,255,255,0.25)" : "rgba(5, 10, 18, 0.65)"
     );
-  }, [satOn, satDate, mapReady]);
+  }, [satOn, nightOn, mapReady]);
 
   // Globe <-> flat projection
   useEffect(() => {
@@ -658,6 +755,10 @@ export function MapExplorer({
     if (s.scenario) setScenario(s.scenario);
     if (s.layers?.storms !== undefined) setStormsOn(s.layers.storms);
     if (s.layers?.quakeHist !== undefined) setQuakeHistOn(s.layers.quakeHist);
+    if (s.layers?.earthAtNight !== undefined) {
+      setNightOn(s.layers.earthAtNight);
+      if (s.layers.earthAtNight) setSatOn(false);
+    }
     if (s.camera && map) {
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (reduced) {
@@ -1828,7 +1929,7 @@ export function MapExplorer({
 
   const legendColours = rampColours(metric.scaleType, metric.ramp);
   const accent = accentFor(metric.scaleType, metric.ramp);
-  const liveCount = [satOn, firesOn, floodsOn, airOn, quakesOn, disastersOn, hurricanesOn, volcanoesOn, auroraOn, stormsOn, quakeHistOn, disHistOn].filter(Boolean).length;
+  const liveCount = [satOn, nightOn, firesOn, floodsOn, airOn, quakesOn, disastersOn, hurricanesOn, volcanoesOn, auroraOn, stormsOn, quakeHistOn, disHistOn].filter(Boolean).length;
   const legendEl = (
     <div>
       <div className="mb-1 truncate text-sm font-medium text-white">
@@ -1852,6 +1953,20 @@ export function MapExplorer({
     window.location.href = `/country/${c.iso3}`;
   }, []);
 
+  // Open the night sky simulator, with the city's 2016-2024 history when known
+  const openSky = useCallback(
+    async (mpsas: number, cityName?: string, cityKey?: string) => {
+      setPopup(null);
+      let series: (number | null)[] | undefined;
+      if (cityKey) {
+        const data = await fetchSkySeries();
+        series = data.cities[cityKey];
+      }
+      setSkySim({ mpsas, city: cityName, series });
+    },
+    []
+  );
+
   // Shared control bodies, reused in the desktop floating panels and the
   // mobile burger drawer so there is a single source of truth.
   const liveLayersBody = (
@@ -1865,10 +1980,38 @@ export function MapExplorer({
           Click a city for its details; zoom in to reveal more.
         </p>
       )}
+      <LayerRow
+        label="Earth at night"
+        dot="#f5d76e"
+        checked={nightOn}
+        onChange={(v) => {
+          setNightOn(v);
+          if (v) setSatOn(false);
+        }}
+      />
+      {nightOn && (
+        <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+          NASA Black Marble: the planet lit by its own cities. Click anywhere
+          to check that spot&apos;s night sky.
+        </p>
+      )}
+      <button
+        onClick={() => setSkySim({ mpsas: 21.9 })}
+        className="-mx-1.5 block w-full rounded-lg px-1.5 py-1.5 text-left text-sm text-[#6da7ec] transition-colors hover:bg-white/5"
+      >
+        Night sky simulator →
+      </button>
       <div className="pt-1 text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
         Live now
       </div>
-      <LayerRow label="Satellite imagery" checked={satOn} onChange={setSatOn} />
+      <LayerRow
+        label="Satellite imagery"
+        checked={satOn}
+        onChange={(v) => {
+          setSatOn(v);
+          if (v) setNightOn(false);
+        }}
+      />
       {satOn && (
         <input
           type="date"
@@ -2476,6 +2619,16 @@ export function MapExplorer({
         <VitalsModal id={vitalsModal} onClose={() => setVitalsModal(null)} />
       )}
 
+      {/* Night sky simulator */}
+      {skySim && (
+        <SkySimulator
+          initialMpsas={skySim.mpsas}
+          cityName={skySim.city}
+          series={skySim.series}
+          onClose={() => setSkySim(null)}
+        />
+      )}
+
       {/* Event popup */}
       {popup && (
         <EventPopup
@@ -2483,6 +2636,7 @@ export function MapExplorer({
           left={popup.left}
           top={popup.top}
           onClose={() => setPopup(null)}
+          onOpenSky={openSky}
         />
       )}
 

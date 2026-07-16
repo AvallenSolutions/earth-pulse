@@ -6,6 +6,8 @@
  * plus a news search, so every dot on the map leads somewhere deeper.
  */
 
+import { bandFor, formatStarCount, nelm, starsAboveHorizon } from "@/lib/sky";
+
 export type MapEvent =
   | {
       kind: "quake";
@@ -60,6 +62,15 @@ export type MapEvent =
       country: string;
       pop: number;
       capital: boolean;
+      /** Zenith sky brightness (mag/arcsec^2, 2024 atlas); null if unknown */
+      mpsas?: number | null;
+    }
+  | {
+      kind: "sky";
+      lat: number;
+      lon: number;
+      /** null when the location is outside the atlas coverage (lat -65..+75) */
+      mpsas: number | null;
     };
 
 const CAT_LABELS = [
@@ -138,11 +149,14 @@ export function EventPopup({
   left,
   top,
   onClose,
+  onOpenSky,
 }: {
   event: MapEvent;
   left: number;
   top: number;
   onClose: () => void;
+  /** Opens the night sky simulator preset to a sky brightness value */
+  onOpenSky?: (mpsas: number, cityName?: string, cityKey?: string) => void;
 }) {
   return (
     <div
@@ -157,7 +171,58 @@ export function EventPopup({
         ✕
       </button>
 
-      {event.kind === "city" ? (
+      {event.kind === "sky" ? (
+        <>
+          <div className="pr-6 text-sm font-semibold text-white">
+            The night sky here
+          </div>
+          {event.mpsas === null ? (
+            <p className="mt-1 text-xs leading-snug text-[#c3c2b7]">
+              This far towards the pole is outside the light pollution atlas
+              (it covers latitudes 65°S to 75°N). The good news: skies up here
+              are usually very dark.
+            </p>
+          ) : (
+            <>
+              <div className="mt-0.5 text-xs text-[#c3c2b7]">
+                {bandFor(event.mpsas).label} · {bandFor(event.mpsas).blurb}
+              </div>
+              <dl className="mt-2 space-y-1 text-xs text-[#898781]">
+                <div className="flex justify-between">
+                  <dt>Stars visible</dt>
+                  <dd className="tabular-nums text-[#c3c2b7]">
+                    about {formatStarCount(starsAboveHorizon(nelm(event.mpsas)))}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt>Sky brightness</dt>
+                  <dd className="tabular-nums text-[#c3c2b7]">
+                    {event.mpsas.toFixed(1)} mag/arcsec²
+                  </dd>
+                </div>
+              </dl>
+            </>
+          )}
+          <div className="mt-3 flex flex-col gap-1.5 border-t border-white/10 pt-2.5 text-xs">
+            {onOpenSky && event.mpsas !== null && (
+              <button
+                onClick={() => onOpenSky(event.mpsas!)}
+                className="text-left text-[#6da7ec] hover:underline"
+              >
+                See this sky →
+              </button>
+            )}
+            <a
+              href="https://djlorenz.github.io/astronomy/lp2024/"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[#6da7ec] hover:underline"
+            >
+              Light Pollution Atlas 2024 (David J. Lorenz) →
+            </a>
+          </div>
+        </>
+      ) : event.kind === "city" ? (
         <>
           <div className="flex items-center gap-2 pr-6">
             {event.capital && (
@@ -177,8 +242,27 @@ export function EventPopup({
                 <dd className="tabular-nums text-[#c3c2b7]">{formatPop(event.pop)}</dd>
               </div>
             )}
+            {event.mpsas !== null && event.mpsas !== undefined && (
+              <div className="flex justify-between">
+                <dt>Night sky</dt>
+                <dd className="text-[#c3c2b7]">
+                  {bandFor(event.mpsas).label} · about{" "}
+                  {formatStarCount(starsAboveHorizon(nelm(event.mpsas)))} stars
+                </dd>
+              </div>
+            )}
           </dl>
           <div className="mt-3 flex flex-col gap-1.5 border-t border-white/10 pt-2.5 text-xs">
+            {onOpenSky && event.mpsas !== null && event.mpsas !== undefined && (
+              <button
+                onClick={() =>
+                  onOpenSky(event.mpsas!, event.name, `${event.iso3}/${event.name}`)
+                }
+                className="text-left text-[#6da7ec] hover:underline"
+              >
+                See what light pollution does to this sky →
+              </button>
+            )}
             <a
               href={`/country/${event.iso3}`}
               className="text-[#6da7ec] hover:underline"
