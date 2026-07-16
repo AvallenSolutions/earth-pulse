@@ -1,21 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  gdeltUrl,
+  parseGdeltArticles,
+  sanitiseNewsQuery,
+  type NewsArticle,
+} from "@/lib/news";
 
 /**
  * In-app news headlines: a dark modal listing the latest coverage for a
  * place or event, so readers stay on the map. Clicking a headline opens the
- * full article in a new tab. Headlines come from our /api/news proxy over
- * the open GDELT index; failures fall back to a Google News search link.
+ * full article in a new tab.
+ *
+ * Fetch order: the open GDELT index directly from this browser (per-visitor
+ * rate allowance, no shared server IP), then our CDN-cached /api/news proxy,
+ * then one quiet retry of both; finally a Google News search link.
  */
-
-type Article = {
-  title: string;
-  url: string;
-  domain: string;
-  image: string | null;
-  published: string;
-};
 
 function timeAgo(iso: string): string {
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
@@ -41,20 +42,38 @@ export function NewsModal({
   days?: "7" | "30" | "all";
   onClose: () => void;
 }) {
-  const [articles, setArticles] = useState<Article[] | null>(null);
+  const [articles, setArticles] = useState<NewsArticle[] | null>(null);
   const [failed, setFailed] = useState(false);
 
-  // The upstream index allows one request every few seconds, so a busy
-  // signal is often transient: retry once, quietly, before giving up.
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
+
+    // Primary: GDELT straight from this browser (open CORS)
+    const fromGdelt = async (): Promise<NewsArticle[]> => {
+      const q = sanitiseNewsQuery(query);
+      if (q.length < 2) throw new Error("query");
+      const res = await fetch(gdeltUrl(q, days ?? "7"));
+      const parsed = parseGdeltArticles(await res.text());
+      if (parsed === null) throw new Error("busy");
+      return parsed;
+    };
+    // Fallback: our proxy, whose CDN cache may hold a recent success
+    const fromApi = async (): Promise<NewsArticle[]> => {
+      const res = await fetch(
+        `/api/news?q=${encodeURIComponent(query)}&days=${days ?? "7"}`
+      );
+      if (!res.ok) throw new Error(String(res.status));
+      return (await res.json()).articles ?? [];
+    };
+
     const load = (attempt: number) => {
-      fetch(`/api/news?q=${encodeURIComponent(query)}&days=${days ?? "7"}`)
-        .then((r) => (r.ok ? r.json() : Promise.reject()))
-        .then((j) => alive && setArticles(j.articles ?? []))
+      fromGdelt()
+        .catch(fromApi)
+        .then((a) => alive && setArticles(a))
         .catch(() => {
           if (!alive) return;
+          // Rate windows are seconds long; one quiet retry often lands
           if (attempt === 0) timer = setTimeout(() => load(1), 6000);
           else setFailed(true);
         });
