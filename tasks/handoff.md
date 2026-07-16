@@ -1,4 +1,4 @@
-# Handoff: Earth Pulse — Phase 7.7 complete
+# Handoff: Earth Pulse — Phases 7.7 + 7.8 complete
 Updated: 2026-07-16 | Branch: main | Worktree: main (~/Documents/GitHub/earth-pulse) | Dev port: 3300
 
 ## Goal
@@ -8,7 +8,36 @@ pages, /planet and /compare. Live at https://earth-pulse-alkatera.vercel.app (de
 site is several commits behind main — NOT yet redeployed; deploys need Tim's per-deploy
 permission).
 
-## Done this session (Phase 7.7: visual overhaul)
+## Done this session, part 2 (Phase 7.8: light pollution)
+
+- `src/lib/sky.ts`: Light Pollution Atlas decoder (David J. Lorenz, years
+  2016/2020/2022/2023/2024; 5x5 degree gzipped delta-coded tiles fetched
+  straight from djlorenz.github.io, open CORS). Browser uses native
+  DecompressionStream, Node uses zlib. Also: Schaefer NELM from mpsas,
+  Hipparcos star counts, SKY_BANDS labels, SKY_FEATURES loss thresholds.
+- `scripts/build-sky-quality.ts`: bakes per-city mpsas (2024, 1 d.p.) into
+  cities.json and the 5-year series into public/data/sky-quality.json
+  (36 KB). Tiles cached under data/raw/lp-tiles/. Run AFTER build-cities.
+- `SkySimulator.tsx`: full-screen canvas sky driven by one mpsas value;
+  slider (direction rtl, pristine on the left), star counter, faintest-star
+  and brightness readouts, feature checklist, per-city year chips + delta
+  line, skyglow dome + horizon silhouette with windows that light up.
+  Reduced-motion paints once per change; a sky-repaint listener snaps when
+  the rAF loop is stalled (embedded webviews).
+- Earth at Night layer: GIBS VIIRS_Black_Marble raster under country-fills,
+  mutually exclusive with satellite imagery; fills/border styling now depends
+  on satOn || nightOn. In night mode, land clicks show the local sky quality
+  instead of navigating; ocean clicks always do; polar clicks (outside
+  lat -65..75) get a friendly message.
+- New story "the vanishing night" (stories.ts gained layers.earthAtNight).
+- EventPopup: city variant gains mpsas + "See what light pollution does to
+  this sky" button; new "sky" popup kind for click-anywhere lookups.
+- Verified: pristine vs inner-city simulator skies, Tokyo popup + 2016-2024
+  chips (150 -> 120 stars), Black Marble Europe/Japan, Svalbard message,
+  story run. tsc + build clean. Spot-check: London 17.4, Tokyo 17.2 match
+  the source atlas; a live in-browser decode at London gave 17.6.
+
+## Done this session, part 1 (Phase 7.7: visual overhaul)
 
 ### 1. Hyper-realistic night sky (Starfield.tsx rewritten)
 - DPR-aware canvas (dpr capped at 2); star count scales with area (~1,500 at
