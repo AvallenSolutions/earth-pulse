@@ -1,5 +1,44 @@
-# Handoff: Earth Pulse — Phases 7.7 + 7.8 complete
-Updated: 2026-07-16 | Branch: main | Worktree: main (~/Documents/GitHub/earth-pulse) | Dev port: 3300
+# Handoff: Earth Pulse — Phases 7.7 + 7.8 complete, in-app news UNCOMMITTED
+Updated: 2026-07-16 (late) | Branch: main | Worktree: main (~/Documents/GitHub/earth-pulse) | Dev port: 3300
+
+## URGENT: uncommitted work + first actions for the next session
+The in-app news feature sits complete but UNCOMMITTED in the working tree
+(a Claude Code permission-classifier outage blocked Bash for over an hour;
+file edits worked, terminal did not). First actions:
+1. `npx tsc --noEmit` and `npm run build` (expected clean; not yet run over
+   the final code).
+2. Commit: src/app/api/news/route.ts (new), src/components/NewsModal.tsx
+   (new), EventPopup.tsx + MapExplorer.tsx (modified).
+3. Create the GitHub remote (Tim has asked for this explicitly):
+   `gh repo create AvallenSolutions/earth-pulse --private --source . --push`
+   NOTE: the permission classifier DENIED gh repo create twice this session;
+   if it denies again, ask Tim to run it himself or add a permission rule.
+4. Then push everything.
+
+## In-app news feature (built + browser-verified this session)
+- `/api/news`: keyless proxy over the GDELT DOC 2.0 API (open index, updates
+  every 15 min). Query sanitised (letters/digits/spaces, max 80 chars),
+  `sourcelang:english`, sort DateDesc, days param 7/30/all. Per-instance
+  upstream spacing of 5.5s + 30s cool-off when GDELT reports busy (it rate
+  limits to 1 req/5s per IP and hands out LONG penalties: my burst testing
+  got this IP flagged for over an hour). Success responses s-maxage=900;
+  failures no-store. Dedupes syndicated titles; returns top 8 with
+  {title, url, domain, image, published}.
+- `NewsModal.tsx`: app-styled modal (VitalsModal chrome), skeleton loading,
+  one quiet retry after 6s, failure fallback linking out to a Google News
+  search, article rows (thumbnail, title, domain, time-ago) opening in new
+  tabs, GDELT attribution footer. Escape/backdrop close.
+- `EventPopup.tsx`: newsUrl() removed; new `NewsRequest` type + `onOpenNews`
+  prop; all five news links are now in-app buttons (city, storm/all-time,
+  quake with place-tail query, volcano/30d, disaster) plus a new one on live
+  hurricanes. MapExplorer renders NewsModal from `newsModal` state.
+- Verified in browser: modal opens over the map from the Tokyo popup, styled
+  right, skeleton shows, busy fallback renders. Live headlines NOT yet seen
+  end-to-end because of the GDELT IP flag (the data contract was verified by
+  curl before the flag: 6 valid English articles for the same query shape).
+  Try again once the flag lapses; do not burst-test GDELT from this IP.
+- Chose GDELT over Google News RSS deliberately: Google's feed copyright
+  restricts it to personal, non-commercial feed readers.
 
 ## Goal
 Earth Pulse is a free public climate/environment dashboard: an interactive MapLibre globe

@@ -13,7 +13,8 @@ import { VitalsModal } from "./VitalsModal";
 import { EventTicker, type TickerItem } from "./EventTicker";
 import { Panel } from "./Panel";
 import { MoversPanel } from "./MoversPanel";
-import { EventPopup, type MapEvent } from "./EventPopup";
+import { EventPopup, type MapEvent, type NewsRequest } from "./EventPopup";
+import { NewsModal } from "./NewsModal";
 import { Starfield } from "./Starfield";
 import { GlobeAtmosphere } from "./GlobeAtmosphere";
 import { StoryPlayer } from "./StoryPlayer";
@@ -232,6 +233,7 @@ export function MapExplorer({
   const [skySim, setSkySim] = useState<
     { mpsas: number; city?: string; series?: (number | null)[] } | null
   >(null);
+  const [newsModal, setNewsModal] = useState<NewsRequest | null>(null);
   const [hurricaneCount, setHurricaneCount] = useState<number | null>(null);
   const [stormsOn, setStormsOn] = useState(false);
   const [stormCats, setStormCats] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
@@ -2629,6 +2631,16 @@ export function MapExplorer({
         />
       )}
 
+      {/* In-app news headlines */}
+      {newsModal && (
+        <NewsModal
+          query={newsModal.query}
+          title={newsModal.title}
+          days={newsModal.days}
+          onClose={() => setNewsModal(null)}
+        />
+      )}
+
       {/* Event popup */}
       {popup && (
         <EventPopup
@@ -2637,6 +2649,7 @@ export function MapExplorer({
           top={popup.top}
           onClose={() => setPopup(null)}
           onOpenSky={openSky}
+          onOpenNews={setNewsModal}
         />
       )}
 

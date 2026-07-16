@@ -133,9 +133,9 @@ function timeAgo(ms: number): string {
   });
 }
 
-function newsUrl(query: string): string {
-  return `https://news.google.com/search?q=${encodeURIComponent(query)}`;
-}
+/** What to search the news for, per event kind. Terms are ANDed, so keep
+ *  them tight: a name plus one or two qualifying words. */
+export type NewsRequest = { query: string; title: string; days?: "7" | "30" | "all" };
 
 /** "37.9 million" / "870,000" style population figures */
 function formatPop(pop: number): string {
@@ -150,6 +150,7 @@ export function EventPopup({
   top,
   onClose,
   onOpenSky,
+  onOpenNews,
 }: {
   event: MapEvent;
   left: number;
@@ -157,6 +158,8 @@ export function EventPopup({
   onClose: () => void;
   /** Opens the night sky simulator preset to a sky brightness value */
   onOpenSky?: (mpsas: number, cityName?: string, cityKey?: string) => void;
+  /** Opens the in-app news headlines modal */
+  onOpenNews?: (req: NewsRequest) => void;
 }) {
   return (
     <div
@@ -277,14 +280,17 @@ export function EventPopup({
             >
               Wikipedia →
             </a>
-            <a
-              href={newsUrl(`${event.name} ${event.country}`)}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[#6da7ec] hover:underline"
+            <button
+              onClick={() =>
+                onOpenNews?.({
+                  query: `${event.name} ${event.country}`,
+                  title: `News from ${event.name}`,
+                })
+              }
+              className="text-left text-[#6da7ec] hover:underline"
             >
               News from {event.name} →
-            </a>
+            </button>
           </div>
         </>
       ) : event.kind === "storm" ? (
@@ -314,14 +320,18 @@ export function EventPopup({
             >
               Wikipedia →
             </a>
-            <a
-              href={newsUrl(`${event.name} hurricane cyclone ${event.year}`)}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[#6da7ec] hover:underline"
+            <button
+              onClick={() =>
+                onOpenNews?.({
+                  query: `${event.name} hurricane`,
+                  title: `News: ${event.name} (${event.year})`,
+                  days: "all",
+                })
+              }
+              className="text-left text-[#6da7ec] hover:underline"
             >
               News coverage →
-            </a>
+            </button>
           </div>
         </>
       ) : event.kind === "quake" ? (
@@ -351,14 +361,18 @@ export function EventPopup({
             >
               USGS event page →
             </a>
-            <a
-              href={newsUrl(`M${event.mag.toFixed(1)} earthquake ${event.place}`)}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[#6da7ec] hover:underline"
+            <button
+              onClick={() =>
+                onOpenNews?.({
+                  // "14 km WSW of Mabiton, Philippines" -> "earthquake Mabiton Philippines"
+                  query: `earthquake ${(event.place.split(" of ").pop() ?? event.place).replace(",", " ")}`,
+                  title: `News: M${event.mag.toFixed(1)} earthquake`,
+                })
+              }
+              className="text-left text-[#6da7ec] hover:underline"
             >
               News coverage →
-            </a>
+            </button>
           </div>
         </>
       ) : event.kind === "hurricane" ? (
@@ -399,6 +413,17 @@ export function EventPopup({
             >
               NHC public advisory →
             </a>
+            <button
+              onClick={() =>
+                onOpenNews?.({
+                  query: `hurricane ${event.name}`,
+                  title: `News: ${NHC_CLASS[event.classification] ?? "Storm"} ${event.name}`,
+                })
+              }
+              className="text-left text-[#6da7ec] hover:underline"
+            >
+              News coverage →
+            </button>
           </div>
         </>
       ) : event.kind === "volcano" ? (
@@ -437,14 +462,18 @@ export function EventPopup({
             >
               Smithsonian GVP profile →
             </a>
-            <a
-              href={newsUrl(`${event.name} volcano eruption`)}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[#6da7ec] hover:underline"
+            <button
+              onClick={() =>
+                onOpenNews?.({
+                  query: `${event.name} volcano`,
+                  title: `News: ${event.name}`,
+                  days: "30",
+                })
+              }
+              className="text-left text-[#6da7ec] hover:underline"
             >
               News coverage →
-            </a>
+            </button>
           </div>
         </>
       ) : (
@@ -494,14 +523,19 @@ export function EventPopup({
             >
               Full GDACS report →
             </a>
-            <a
-              href={newsUrl(event.name || `${TYPE_LABELS[event.type]} ${event.country.split(",")[0] ?? ""}`)}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[#6da7ec] hover:underline"
+            <button
+              onClick={() =>
+                onOpenNews?.({
+                  query:
+                    event.name ||
+                    `${TYPE_LABELS[event.type]} ${event.country.split(",")[0] ?? ""}`,
+                  title: `News: ${event.name || TYPE_LABELS[event.type] || "this event"}`,
+                })
+              }
+              className="text-left text-[#6da7ec] hover:underline"
             >
               News coverage →
-            </a>
+            </button>
           </div>
         </>
       )}
