@@ -52,3 +52,18 @@ Corrections and patterns to remember for this project. Reviewed at session start
   changed size between renders"), which silently breaks the map init effect
   (click handlers never register). A production build never sees this. For a
   clean verify, open a FRESH tab (tabs_create) rather than reusing the seed tab.
+- **MapLibre globe pixel radius = worldSize/2pi x sec(centre latitude).** The
+  projection matches mercator scale at the centre lat, so the sphere grows
+  toward the poles. Any screen-space overlay tracking the globe's limb must
+  use sec(lat) and listen to move (not just zoom). See globePixelRadius().
+- **Heatmap KDE runs in mercator space, not screen space.** A fixed
+  heatmap-radius cannot blend a regular lat/lon grid near the poles (rows
+  stretch apart) and renders as concentric rings. heatmap-radius accepts
+  data-driven expressions: scale per-point by sec(lat) (capped) to smooth.
+- **Canvas overlays must do their first paint unconditionally.** Gating all
+  drawing on !document.hidden means the embedded Browser pane (hidden=true
+  always) and freshly backgrounded tabs show a blank canvas. Paint once
+  synchronously, then let rAF handle animation only.
+- **The map "load" event can lag many seconds behind first render** when GIBS
+  tiles are slow. Overlays that must track the globe from the first frame
+  need the map object at creation time (setMapObj in init), not at load.

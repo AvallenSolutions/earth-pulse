@@ -15,6 +15,7 @@ import { Panel } from "./Panel";
 import { MoversPanel } from "./MoversPanel";
 import { EventPopup, type MapEvent } from "./EventPopup";
 import { Starfield } from "./Starfield";
+import { GlobeAtmosphere } from "./GlobeAtmosphere";
 import { StoryPlayer } from "./StoryPlayer";
 import { STORIES, type Story } from "@/lib/stories";
 
@@ -28,6 +29,22 @@ const STORM_CATS = {
   colours: ["#7d8a97", "#4eb3d3", "#fed976", "#fb9a3c", "#f0502a", "#e01515", "#c9184a"],
   labels: ["TD", "TS", "Cat 1", "Cat 2", "Cat 3", "Cat 4", "Cat 5"],
 };
+
+/** Major cities (Natural Earth, pre-built static JSON). Fetched once. */
+type CityRec = {
+  name: string; iso3: string; country: string; lon: number; lat: number;
+  pop: number; capital: boolean; tier: number;
+};
+let citiesData: Promise<{ cities: CityRec[] }> | null = null;
+function fetchCities() {
+  citiesData ??= fetch("/data/cities.json")
+    .then((r) => (r.ok ? r.json() : { cities: [] }))
+    .catch(() => ({ cities: [] }));
+  return citiesData;
+}
+/** Per-tier reveal zooms: megacities always, large cities soon, rest zoomed in */
+const CITY_TIER_MINZOOM = [0, 2.2, 3.6];
+const CITY_LAYER_IDS = [0, 1, 2].flatMap((t) => [`cities-dot-${t}`, `cities-label-${t}`]);
 
 const stormsCache = new Map<number, StormYear>();
 const quakeHistCache = new Map<number, { quakes: QuakeRec[] }>();
@@ -155,6 +172,9 @@ export function MapExplorer({
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  // Set as soon as the map object exists (before tiles finish loading) so the
+  // star mask and atmosphere overlays track the globe from the first frame
+  const [mapObj, setMapObj] = useState<maplibregl.Map | null>(null);
   const [metricId, setMetricId] = useState(
     metrics.some((m) => m.id === initialMetric) ? initialMetric! : metrics[0].id
   );
@@ -194,6 +214,7 @@ export function MapExplorer({
   const [hurricanesOn, setHurricanesOn] = useState(false);
   const [volcanoesOn, setVolcanoesOn] = useState(false);
   const [auroraOn, setAuroraOn] = useState(false);
+  const [citiesOn, setCitiesOn] = useState(true);
   const [hurricaneCount, setHurricaneCount] = useState<number | null>(null);
   const [stormsOn, setStormsOn] = useState(false);
   const [stormCats, setStormCats] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
@@ -225,10 +246,11 @@ export function MapExplorer({
       style: {
         version: 8,
         projection: { type: "globe" },
+        glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
         // Space fades into a thin blue atmosphere around the globe
         sky: {
-          "sky-color": "#04060c",
-          "horizon-color": "#274a80",
+          "sky-color": "#010409",
+          "horizon-color": "#2e5f9e",
           "fog-color": "#0a1420",
           "sky-horizon-blend": 0.6,
           "horizon-fog-blend": 0.6,
@@ -282,7 +304,14 @@ export function MapExplorer({
         id: "bluemarble",
         type: "raster",
         source: "bluemarble",
-        paint: { "raster-opacity": 1, "raster-saturation": -0.25, "raster-brightness-max": 0.85 },
+        paint: {
+          // Bright enough to feel like the real planet, dim enough that the
+          // choropleth tints stay readable on top
+          "raster-opacity": 1,
+          "raster-saturation": -0.18,
+          "raster-brightness-max": 0.88,
+          "raster-contrast": 0.05,
+        },
       });
       const world = await (await fetch("/data/world.geo.json")).json();
       map.addSource("countries", {
@@ -437,7 +466,19 @@ export function MapExplorer({
         number: Number(p.number),
       });
     });
-    for (const layer of ["quakes", "disasters", "storms", "quakehist", "dishist", "hurricanes", "volcanoes"]) {
+    for (const layerId of CITY_LAYER_IDS) map.on("click", layerId, (e) => {
+      const p = e.features?.[0]?.properties;
+      if (!p) return;
+      popupAt(e, {
+        kind: "city",
+        name: String(p.name),
+        iso3: String(p.iso3),
+        country: String(p.country),
+        pop: Number(p.pop),
+        capital: p.capital === true || p.capital === "true",
+      });
+    });
+    for (const layer of ["quakes", "disasters", "storms", "quakehist", "dishist", "hurricanes", "volcanoes", ...CITY_LAYER_IDS]) {
       map.on("mouseenter", layer, () => {
         map.getCanvas().style.cursor = "pointer";
       });
@@ -446,7 +487,7 @@ export function MapExplorer({
       // event dots sit above countries; don't navigate through them
       const hits = map
         .queryRenderedFeatures(e.point, {
-          layers: ["quakes", "disasters", "storms", "quakehist", "dishist", "hurricanes", "volcanoes"].filter((l) => map.getLayer(l)),
+          layers: ["quakes", "disasters", "storms", "quakehist", "dishist", "hurricanes", "volcanoes", ...CITY_LAYER_IDS].filter((l) => map.getLayer(l)),
         })
         .length;
       if (hits > 0) return;
@@ -455,6 +496,7 @@ export function MapExplorer({
     });
 
     mapRef.current = map;
+    setMapObj(map);
     if (process.env.NODE_ENV === "development")
       (window as unknown as { __map?: maplibregl.Map }).__map = map;
 
@@ -467,6 +509,7 @@ export function MapExplorer({
       document.removeEventListener("visibilitychange", onVisible);
       map.remove();
       mapRef.current = null;
+      setMapObj(null);
     };
   }, []);
 
@@ -1376,14 +1419,17 @@ export function MapExplorer({
     };
   }, [volcanoesOn, mapReady]);
 
-  // Aurora forecast oval (NOAA SWPC OVATION). A heatmap glow near the poles;
-  // polls every 30 min.
+  // Aurora forecast oval (NOAA SWPC OVATION), drawn like the real thing:
+  // three stacked heatmaps from the same grid; a wide violet fringe (the
+  // high-altitude oxygen/nitrogen edge), the dominant green body, and a
+  // bright green-white core where the probability peaks. Polls every 30 min.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     let alive = true;
     if (!auroraOn) {
-      if (map.getLayer("aurora")) map.removeLayer("aurora");
+      for (const id of ["aurora-fringe", "aurora", "aurora-core"])
+        if (map.getLayer(id)) map.removeLayer(id);
       if (map.getSource("aurora")) map.removeSource("aurora");
       return;
     }
@@ -1395,9 +1441,15 @@ export function MapExplorer({
         if (!alive || !mapRef.current) return;
         const geojson = {
           type: "FeatureCollection" as const,
+          // s: mercator stretch factor (sec of latitude). The heatmap kernel
+          // works in mercator space, so per-point radii are scaled by s to
+          // keep the 1-degree grid blending into a smooth band near the poles.
           features: points.map(([lon, lat, prob]) => ({
             type: "Feature" as const,
-            properties: { prob },
+            properties: {
+              prob,
+              s: Math.min(1 / Math.cos((lat * Math.PI) / 180), 14),
+            },
             geometry: { type: "Point" as const, coordinates: [lon, lat] },
           })),
         };
@@ -1411,22 +1463,66 @@ export function MapExplorer({
           data: geojson,
           attribution: 'Aurora: <a href="https://www.swpc.noaa.gov">NOAA SWPC</a>',
         });
+        const weight = [
+          "interpolate", ["linear"], ["get", "prob"], 5, 0.2, 90, 1,
+        ] as maplibregl.ExpressionSpecification;
+        const radius = (base1: number, base5: number) =>
+          [
+            "interpolate", ["linear"], ["zoom"],
+            1, ["*", base1, ["get", "s"]],
+            5, ["*", base5, ["get", "s"]],
+          ] as maplibregl.ExpressionSpecification;
+        map.addLayer({
+          id: "aurora-fringe",
+          type: "heatmap",
+          source: "aurora",
+          paint: {
+            "heatmap-weight": weight,
+            "heatmap-intensity": 0.55,
+            "heatmap-radius": radius(9, 26),
+            "heatmap-opacity": 0.32,
+            "heatmap-color": [
+              "interpolate", ["linear"], ["heatmap-density"],
+              0, "rgba(0,0,0,0)",
+              0.25, "rgba(80,50,160,0.28)",
+              0.6, "rgba(140,70,210,0.5)",
+              1, "rgba(200,120,255,0.65)",
+            ],
+          },
+        });
         map.addLayer({
           id: "aurora",
           type: "heatmap",
           source: "aurora",
           paint: {
-            "heatmap-weight": ["interpolate", ["linear"], ["get", "prob"], 5, 0.15, 90, 1],
-            "heatmap-intensity": 0.9,
-            "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 1, 8, 5, 34],
-            "heatmap-opacity": 0.65,
+            "heatmap-weight": weight,
+            "heatmap-intensity": 0.85,
+            "heatmap-radius": radius(6, 18),
+            "heatmap-opacity": 0.7,
             "heatmap-color": [
               "interpolate", ["linear"], ["heatmap-density"],
               0, "rgba(0,0,0,0)",
-              0.2, "rgba(30,120,90,0.35)",
-              0.5, "rgba(45,190,120,0.6)",
-              0.8, "rgba(120,240,170,0.8)",
-              1, "rgba(200,255,220,0.95)",
+              0.15, "rgba(15,90,60,0.25)",
+              0.4, "rgba(30,170,95,0.55)",
+              0.7, "rgba(80,235,140,0.8)",
+              1, "rgba(190,255,205,0.95)",
+            ],
+          },
+        });
+        map.addLayer({
+          id: "aurora-core",
+          type: "heatmap",
+          source: "aurora",
+          paint: {
+            "heatmap-weight": weight,
+            "heatmap-intensity": 1.1,
+            "heatmap-radius": radius(3, 9),
+            "heatmap-opacity": 0.55,
+            "heatmap-color": [
+              "interpolate", ["linear"], ["heatmap-density"],
+              0, "rgba(0,0,0,0)",
+              0.5, "rgba(140,255,180,0.45)",
+              1, "rgba(240,255,245,0.95)",
             ],
           },
         });
@@ -1443,6 +1539,116 @@ export function MapExplorer({
       clearInterval(timer);
     };
   }, [auroraOn, mapReady]);
+
+  // Aurora shimmer: the curtains slowly brighten, drift and dim like a live
+  // display. Layered sine waves at offset phases so the three bands never
+  // pulse in lockstep. Skipped for reduced motion; paused on hidden tabs.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !auroraOn) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    const base = { "aurora-fringe": 0.32, aurora: 0.7, "aurora-core": 0.55 };
+    const shimmer = (t: number) => {
+      if (!document.hidden) {
+        const wave = (f1: number, f2: number, ph: number) =>
+          0.72 + 0.2 * Math.sin(t * f1 + ph) + 0.08 * Math.sin(t * f2 + ph * 2.3);
+        if (map.getLayer("aurora"))
+          map.setPaintProperty("aurora", "heatmap-opacity", base.aurora * wave(0.00035, 0.0011, 0));
+        if (map.getLayer("aurora-fringe"))
+          map.setPaintProperty("aurora-fringe", "heatmap-opacity", base["aurora-fringe"] * wave(0.00028, 0.0009, 2.1));
+        if (map.getLayer("aurora-core")) {
+          map.setPaintProperty("aurora-core", "heatmap-opacity", base["aurora-core"] * wave(0.00045, 0.0014, 4.2));
+          map.setPaintProperty("aurora-core", "heatmap-intensity", 1.1 + 0.2 * Math.sin(t * 0.0005 + 1.3));
+        }
+      }
+      raf = requestAnimationFrame(shimmer);
+    };
+    raf = requestAnimationFrame(shimmer);
+    return () => {
+      cancelAnimationFrame(raf);
+      for (const [id, v] of Object.entries(base))
+        if (map.getLayer(id)) map.setPaintProperty(id, "heatmap-opacity", v);
+    };
+  }, [auroraOn, mapReady]);
+
+  // Major cities (Natural Earth): warm dots + labels, revealed by tier as
+  // you zoom so the globe stays clean from space. Click a city for details.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    let alive = true;
+    if (!citiesOn) {
+      for (const id of CITY_LAYER_IDS) if (map.getLayer(id)) map.removeLayer(id);
+      if (map.getSource("cities")) map.removeSource("cities");
+      return;
+    }
+    (async () => {
+      const { cities } = await fetchCities();
+      if (!alive || !mapRef.current || map.getSource("cities")) return;
+      map.addSource("cities", {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: cities.map((c) => ({
+            type: "Feature" as const,
+            properties: c,
+            geometry: { type: "Point" as const, coordinates: [c.lon, c.lat] },
+          })),
+        },
+        attribution:
+          'Cities: <a href="https://www.naturalearthdata.com">Natural Earth</a>',
+      });
+      for (const tier of [0, 1, 2]) {
+        const minzoom = CITY_TIER_MINZOOM[tier];
+        const dotBase = [2.6, 2, 1.6][tier];
+        map.addLayer({
+          id: `cities-dot-${tier}`,
+          type: "circle",
+          source: "cities",
+          filter: ["==", ["get", "tier"], tier],
+          minzoom,
+          paint: {
+            "circle-radius": [
+              "interpolate", ["linear"], ["zoom"],
+              1, dotBase, 6, dotBase * 2,
+            ],
+            "circle-color": "#ffd18f",
+            "circle-opacity": 0.92,
+            "circle-blur": 0.25,
+            "circle-stroke-color": "rgba(10, 8, 2, 0.7)",
+            "circle-stroke-width": 0.6,
+          },
+        });
+        map.addLayer({
+          id: `cities-label-${tier}`,
+          type: "symbol",
+          source: "cities",
+          filter: ["==", ["get", "tier"], tier],
+          minzoom: Math.max(minzoom, tier === 0 ? 1.6 : minzoom + 0.4),
+          layout: {
+            "text-field": ["get", "name"],
+            "text-font": ["Noto Sans Regular"],
+            "text-size": [
+              "interpolate", ["linear"], ["zoom"],
+              2, [11.5, 10, 9][tier], 6, [15, 13.5, 12][tier],
+            ],
+            "text-offset": [0, 0.7],
+            "text-anchor": "top",
+            "symbol-sort-key": ["*", -1, ["get", "pop"]],
+          },
+          paint: {
+            "text-color": ["case", ["get", "capital"], "#f5edd8", "#ddd9cc"],
+            "text-halo-color": "rgba(4, 8, 15, 0.9)",
+            "text-halo-width": 1.2,
+          },
+        });
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [citiesOn, mapReady]);
 
   // Live event ticker: the biggest things happening on Earth right now.
   // Refetches every 2 minutes so an open tab stays a genuine live feed.
@@ -1651,6 +1857,15 @@ export function MapExplorer({
   const liveLayersBody = (
     <div className="space-y-0.5">
       <div className="pt-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
+        Places
+      </div>
+      <LayerRow label="Major cities" dot="#ffd18f" checked={citiesOn} onChange={setCitiesOn} />
+      {citiesOn && (
+        <p className="pb-1 pl-4 text-[10px] leading-snug text-[#898781]">
+          Click a city for its details; zoom in to reveal more.
+        </p>
+      )}
+      <div className="pt-1 text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
         Live now
       </div>
       <LayerRow label="Satellite imagery" checked={satOn} onChange={setSatOn} />
@@ -1871,7 +2086,10 @@ export function MapExplorer({
 
       {/* Starfield: sits above the WebGL canvas, screen-blend so stars appear
           only in the dark space behind the globe and vanish on bright surfaces */}
-      <Starfield />
+      <Starfield map={mapObj} globeOn={globeOn} />
+
+      {/* Atmospheric limb glow hugging the globe's edge */}
+      <GlobeAtmosphere map={mapObj} on={globeOn} />
 
       {/* Header + mobile burger */}
       <div className="absolute left-3 top-3 z-30 flex items-center gap-2 lg:left-4 lg:top-4 lg:block">

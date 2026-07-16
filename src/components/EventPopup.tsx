@@ -52,6 +52,14 @@ export type MapEvent =
       end: string | null;
       ongoing: boolean;
       number: number;
+    }
+  | {
+      kind: "city";
+      name: string;
+      iso3: string;
+      country: string;
+      pop: number;
+      capital: boolean;
     };
 
 const CAT_LABELS = [
@@ -118,6 +126,13 @@ function newsUrl(query: string): string {
   return `https://news.google.com/search?q=${encodeURIComponent(query)}`;
 }
 
+/** "37.9 million" / "870,000" style population figures */
+function formatPop(pop: number): string {
+  if (pop >= 1_000_000)
+    return `${(pop / 1_000_000).toFixed(pop >= 10_000_000 ? 0 : 1)} million`;
+  return pop.toLocaleString("en-GB");
+}
+
 export function EventPopup({
   event,
   left,
@@ -142,7 +157,53 @@ export function EventPopup({
         ✕
       </button>
 
-      {event.kind === "storm" ? (
+      {event.kind === "city" ? (
+        <>
+          <div className="flex items-center gap-2 pr-6">
+            {event.capital && (
+              <span className="rounded-full bg-[#ffd18f]/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#ffd18f]">
+                Capital city
+              </span>
+            )}
+          </div>
+          <div className={`${event.capital ? "mt-1.5" : ""} pr-6 text-sm font-semibold text-white`}>
+            {event.name}
+          </div>
+          <div className="mt-0.5 text-xs text-[#c3c2b7]">{event.country}</div>
+          <dl className="mt-2 space-y-1 text-xs text-[#898781]">
+            {event.pop > 0 && (
+              <div className="flex justify-between">
+                <dt>Population (urban area)</dt>
+                <dd className="tabular-nums text-[#c3c2b7]">{formatPop(event.pop)}</dd>
+              </div>
+            )}
+          </dl>
+          <div className="mt-3 flex flex-col gap-1.5 border-t border-white/10 pt-2.5 text-xs">
+            <a
+              href={`/country/${event.iso3}`}
+              className="text-[#6da7ec] hover:underline"
+            >
+              {event.country}: the full country picture →
+            </a>
+            <a
+              href={`https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(`${event.name}, ${event.country}`)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[#6da7ec] hover:underline"
+            >
+              Wikipedia →
+            </a>
+            <a
+              href={newsUrl(`${event.name} ${event.country}`)}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[#6da7ec] hover:underline"
+            >
+              News from {event.name} →
+            </a>
+          </div>
+        </>
+      ) : event.kind === "storm" ? (
         <>
           <div className="pr-6 text-sm font-semibold text-white">
             {event.name} · {event.year}

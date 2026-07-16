@@ -197,3 +197,32 @@ Full plan: ~/.claude/plans/please-write-a-plan-replicated-lantern.md
 1. Name/URL: Earth Pulse, live at earth-pulse-alkatera.vercel.app
 2. Independent tool (not alkatera-branded on the site itself)
 3. "What can one person do" actions: yes, added to country pages
+
+## Phase 7.7 — Visual overhaul ✅ (16 Jul 2026)
+Requested: full visual improvement covering the background, the globe, the
+aurora, and major cities.
+- [x] Hyper-realistic night sky: Starfield rewrite (DPR-aware, area-scaled
+      star count, power-law magnitudes, temperature-based star colours, Milky
+      Way band with dust lanes, halo on the brightest stars, resize rebuild)
+- [x] Stars no longer show through the globe: the planet's disc is masked out
+      of the sky canvas (radius = worldSize/2pi x sec(lat), tracks zoom/pan)
+- [x] Globe atmosphere: GlobeAtmosphere canvas limb glow + halo that tracks
+      the globe's radius and fades as the limb leaves the viewport; deeper
+      sky colours; retuned Blue Marble raster
+- [x] Real-looking aurora: violet fringe + green body + bright core heatmap
+      stack, per-point radius scaled by sec(lat) so the OVATION grid blends
+      smoothly (no rings), slow multi-sine shimmer (reduced-motion safe)
+- [x] Major cities: scripts/build-cities.ts -> public/data/cities.json (789
+      cities, 3 tiers, 200 capitals); amber dots + labels revealed by zoom;
+      click popup with population, capital badge, country + Wikipedia + news
+      links; "Major cities" toggle (default on) in the layers panel
+- [x] Verified in browser: choropleth intact, city popup (Cairo), aurora over
+      the Arctic, flat-map fallback, tsc + production build clean
+
+### Review notes (Phase 7.7)
+- MapLibre globe pixel radius is worldSize/2pi x sec(centre lat); shared via
+  globePixelRadius() in GlobeAtmosphere.tsx, used by the star mask too.
+- Heatmap KDE happens in mercator space: fixed pixel radii leave the 1-degree
+  OVATION grid as concentric rings near the poles. Fixed with per-point
+  data-driven heatmap-radius scaled by sec(lat) (capped at 14).
+- Starfield hides entirely on the flat projection (map covers the viewport).
