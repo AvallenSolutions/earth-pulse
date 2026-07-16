@@ -1,19 +1,17 @@
-# Handoff: Earth Pulse — Phases 7.7 + 7.8 complete, in-app news UNCOMMITTED
-Updated: 2026-07-16 (late) | Branch: main | Worktree: main (~/Documents/GitHub/earth-pulse) | Dev port: 3300
+# Handoff: Earth Pulse — Phases 7.7 + 7.8 + in-app news, all pushed
+Updated: 2026-07-16 (evening) | Branch: main (in sync with origin) | Dev port: 3300
+Remote: https://github.com/AvallenSolutions/earth-pulse (private)
 
-## URGENT: uncommitted work + first actions for the next session
-The in-app news feature sits complete but UNCOMMITTED in the working tree
-(a Claude Code permission-classifier outage blocked Bash for over an hour;
-file edits worked, terminal did not). First actions:
-1. `npx tsc --noEmit` and `npm run build` (expected clean; not yet run over
-   the final code).
-2. Commit: src/app/api/news/route.ts (new), src/components/NewsModal.tsx
-   (new), EventPopup.tsx + MapExplorer.tsx (modified).
-3. Create the GitHub remote (Tim has asked for this explicitly):
-   `gh repo create AvallenSolutions/earth-pulse --private --source . --push`
-   NOTE: the permission classifier DENIED gh repo create twice this session;
-   if it denies again, ask Tim to run it himself or add a permission rule.
-4. Then push everything.
+## Latest: news feed production fix (b5226ff, pushed)
+Production news was failing constantly: GDELT rate limits per IP with long
+penalties and Vercel's shared egress is effectively always throttled. Fix:
+the modal now fetches GDELT directly from the visitor's browser (GDELT sends
+open CORS; each visitor spends their own allowance, same pattern as the
+light pollution tiles). /api/news stays as a CDN-cached fallback; Google
+News search link is the last resort. Shared logic in src/lib/news.ts.
+Verified live: fresh Tokyo headlines via the direct path, zero /api/news
+hits in the dev server log. NOTE: the deployed site still runs the old
+proxy-only code; the fix reaches users on the next deploy (Tim's call).
 
 ## In-app news feature (built + browser-verified this session)
 - `/api/news`: keyless proxy over the GDELT DOC 2.0 API (open index, updates
