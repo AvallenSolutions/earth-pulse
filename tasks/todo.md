@@ -286,3 +286,15 @@ Nebula, the Plough visible), reflecting each city's latitude.
       (verified 1960 empty vs 2024 blizzard); live ISS layer (wheretheiss.at,
       10s poll) with popup (altitude, speed, sunlight/shadow, NASA link)
 - [x] Verified in browser; tsc + production build clean
+
+## Phase 8.1 — UI tidy-up: overlaps + mobile immersive view ✅ (16 Jul 2026)
+- [x] Desktop: Live layers panel scrolls internally (max-h) so it never runs
+      under the globe toggle; story chips constrained (header max-w) and the
+      Map data panel moved below them; Find my sky is two clean lines
+- [x] Mobile: legend block replaced by one slim metric pill; vitals strip is
+      a single row (details in tooltip); slider slimmed (axis row only shows
+      when it carries the scenario switch)
+- [x] Clear view toggle (eye): hides every panel, strip, slider, ticker and
+      story chrome for an unobstructed sky; attribution starts collapsed
+- [x] Verified at 375x812 (night lights full-screen) and 1280x800; tsc +
+      build clean

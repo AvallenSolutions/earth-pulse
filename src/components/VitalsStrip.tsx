@@ -99,9 +99,13 @@ export function VitalsStrip({
                 {it.arrow === "up" ? "▲" : "▼"}
               </span>
             </div>
-            <div className="text-[10px] tabular-nums text-[#898781]">
-              {it.detail}
-            </div>
+            {/* On phones the detail line lives in the tooltip; the strip
+                stays a single slim row */}
+            {!compact && (
+              <div className="text-[10px] tabular-nums text-[#898781]">
+                {it.detail}
+              </div>
+            )}
           </button>
         ))}
       </div>

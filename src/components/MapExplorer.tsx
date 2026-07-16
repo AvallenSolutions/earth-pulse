@@ -257,6 +257,9 @@ export function MapExplorer({
   const [liveAsOf, setLiveAsOf] = useState<string | null>(null);
   const [vitalsModal, setVitalsModal] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  /** Immersive view: hide every panel and strip so the map fills the screen
+   *  (the night sky deserves an unobstructed look, especially on phones) */
+  const [uiHidden, setUiHidden] = useState(false);
   const [airStatus, setAirStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   // Story mode
@@ -317,6 +320,14 @@ export function MapExplorer({
       })
     );
     map.touchZoomRotate.disableRotation();
+
+    // The compact attribution opens expanded on load, squatting over the
+    // small-screen UI; start it collapsed (the info button still opens it)
+    map.once("load", () => {
+      document
+        .querySelector(".maplibregl-ctrl-attrib")
+        ?.classList.remove("maplibregl-compact-show");
+    });
 
     map.on("error", (e) => console.error("[map error]", e.error?.message ?? e));
     map.on("load", async () => {
@@ -2156,9 +2167,14 @@ export function MapExplorer({
       <button
         onClick={findMySky}
         disabled={findingSky}
-        className="-mx-1.5 block w-full rounded-lg px-1.5 py-1.5 text-left text-sm text-[#6da7ec] transition-colors hover:bg-white/5 disabled:opacity-60"
+        className="-mx-1.5 block w-full rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-white/5 disabled:opacity-60"
       >
-        {findingSky ? "Reading your sky…" : "Find my sky (uses your location) →"}
+        <span className="block text-sm text-[#6da7ec]">
+          {findingSky ? "Reading your sky…" : "Find my sky →"}
+        </span>
+        <span className="block text-[10px] leading-snug text-[#898781]">
+          Uses your location to read the atlas where you live.
+        </span>
       </button>
       <div className="pt-1 text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
         Live now
@@ -2442,14 +2458,14 @@ export function MapExplorer({
             />
           </svg>
         </button>
-        <div>
+        <div className="lg:max-w-[23rem]">
           <h1 className="pointer-events-none text-lg font-semibold tracking-tight text-white lg:text-xl">
             Earth Pulse
           </h1>
-          <p className="pointer-events-none hidden text-sm text-[#c3c2b7] lg:block">
+          <p className={`pointer-events-none hidden text-sm text-[#c3c2b7] ${uiHidden ? "" : "lg:block"}`}>
             The state of the planet, {metric.firstYear} to today
           </p>
-          <div className="mt-1 hidden flex-wrap gap-x-4 gap-y-0.5 text-sm lg:flex">
+          <div className={`mt-1 hidden flex-wrap gap-x-4 gap-y-0.5 text-sm ${uiHidden ? "" : "lg:flex"}`}>
             <a href="/planet" className="text-[#6da7ec] hover:underline">
               Planet trends →
             </a>
@@ -2480,28 +2496,40 @@ export function MapExplorer({
       </div>
 
       {/* Planet vitals: floating pill (lg+) */}
-      <VitalsStrip vitals={vitals} onSelect={setVitalsModal} />
+      {!uiHidden && <VitalsStrip vitals={vitals} onSelect={setVitalsModal} />}
 
       {/* Planet vitals: horizontal strip on mobile/tablet */}
-      <div className="absolute inset-x-3 top-[3.75rem] z-10 lg:hidden">
-        <VitalsStrip vitals={vitals} variant="inline" onSelect={setVitalsModal} />
-      </div>
+      {!uiHidden && (
+        <div className="absolute inset-x-3 top-[3.75rem] z-10 lg:hidden">
+          <VitalsStrip vitals={vitals} variant="inline" onSelect={setVitalsModal} />
+        </div>
+      )}
 
       {/* Search (desktop) */}
-      <div className="absolute right-4 top-4 z-30 hidden w-64 lg:block">
-        <CountrySearch countries={countries} onSelect={onSelectCountry} />
-      </div>
+      {!uiHidden && (
+        <div className="absolute right-4 top-4 z-30 hidden w-64 lg:block">
+          <CountrySearch countries={countries} onSelect={onSelectCountry} />
+        </div>
+      )}
 
-      {/* Current-metric legend chip (mobile), top-left under the vitals strip */}
-      <button
-        onClick={() => setMobileMenuOpen(true)}
-        className="absolute left-3 top-[7.25rem] z-10 w-[62%] max-w-[15rem] rounded-xl border border-white/10 bg-[#161615]/95 p-2 text-left backdrop-blur lg:hidden"
-      >
-        {legendEl}
-      </button>
+      {/* Current-metric chip (mobile): one slim pill, tap for the drawer */}
+      {!uiHidden && (
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="absolute left-3 top-[6.9rem] z-10 flex max-w-[70%] items-center gap-2 rounded-full border border-white/10 bg-[#161615]/95 px-3 py-1.5 backdrop-blur lg:hidden"
+        >
+          <span
+            className="h-1.5 w-7 shrink-0 rounded-full"
+            style={{ background: `linear-gradient(to right, ${legendColours.join(", ")})` }}
+            aria-hidden="true"
+          />
+          <span className="truncate text-xs text-white">{metric.name}</span>
+          <span className="text-[10px] text-[#898781]">›</span>
+        </button>
+      )}
 
       {/* Live layers + movers (desktop floating, stacked so expansion pushes down) */}
-      <div className="absolute right-4 top-16 z-10 hidden w-64 flex-col gap-2 lg:flex">
+      <div className={`absolute right-4 top-16 z-10 w-64 flex-col gap-2 ${uiHidden ? "hidden" : "hidden lg:flex"}`}>
         <Panel
           title="Live layers"
           badge={
@@ -2514,7 +2542,11 @@ export function MapExplorer({
           }
           defaultOpen={false}
         >
-          {liveLayersBody}
+          {/* Scrolls internally so a fully expanded list never runs under
+              the globe toggle and attribution */}
+          <div className="max-h-[calc(100dvh-24rem)] overflow-y-auto pr-1">
+            {liveLayersBody}
+          </div>
         </Panel>
         <Panel title="Biggest movers" defaultOpen={false}>
           <div className="max-h-[calc(100dvh-420px)] overflow-y-auto pr-1">
@@ -2524,7 +2556,7 @@ export function MapExplorer({
       </div>
 
       {/* Metric picker (desktop floating) */}
-      <div className="absolute left-4 top-28 z-20 hidden w-[21rem] max-w-[85vw] lg:block">
+      <div className={`absolute left-4 top-[10.5rem] z-20 w-[21rem] max-w-[85vw] ${uiHidden ? "hidden" : "hidden lg:block"}`}>
         <Panel title="Map data" defaultOpen={false} summary={legendEl}>
           {metricPickerBody}
         </Panel>
@@ -2614,7 +2646,27 @@ export function MapExplorer({
       )}
 
       {/* Live event ticker (news crawl, pinned to the very bottom) */}
-      <EventTicker items={ticker} onSelect={showTickerEvent} />
+      {!uiHidden && <EventTicker items={ticker} onSelect={showTickerEvent} />}
+
+      {/* Immersive view: clear the decks and let the planet breathe */}
+      <button
+        onClick={() => setUiHidden((h) => !h)}
+        aria-pressed={uiHidden}
+        aria-label={uiHidden ? "Show the interface" : "Hide the interface"}
+        title={uiHidden ? "Show the interface" : "Hide the interface for a clear view"}
+        className={`absolute bottom-[9.25rem] right-4 z-10 flex items-center gap-2 rounded-full border border-white/10 bg-[#1a1a19]/90 px-3 py-2 text-xs backdrop-blur transition-colors hover:bg-[#1a1a19] hover:text-white ${
+          uiHidden ? "text-white" : "text-[#c3c2b7]"
+        }`}
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+          <g stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round">
+            <path d="M1 7c1.8-2.9 4-4.3 6-4.3S11.2 4.1 13 7c-1.8 2.9-4 4.3-6 4.3S2.8 9.9 1 7Z" />
+            <circle cx="7" cy="7" r="1.9" />
+            {uiHidden && <path d="M2.2 12.4 11.8 1.6" />}
+          </g>
+        </svg>
+        {uiHidden ? "Show interface" : "Clear view"}
+      </button>
 
       {/* Globe / flat toggle */}
       <button
@@ -2643,7 +2695,11 @@ export function MapExplorer({
       </button>
 
       {/* Time slider */}
-      <div className="absolute inset-x-0 bottom-9 z-10 mx-auto w-[min(680px,92%)] rounded-xl border border-white/10 bg-[#1a1a19]/90 px-4 py-2 backdrop-blur">
+      <div
+        className={`absolute inset-x-0 bottom-9 z-10 mx-auto w-[min(680px,94%)] rounded-xl border border-white/10 bg-[#1a1a19]/90 px-3 py-1.5 backdrop-blur sm:px-4 sm:py-2 ${
+          uiHidden ? "hidden" : ""
+        }`}
+      >
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
@@ -2750,7 +2806,13 @@ export function MapExplorer({
             )}
           </div>
         </div>
-        <div className="mt-1 flex items-center justify-between text-[10px] tabular-nums text-[#898781]">
+        {/* On phones this row only appears when it carries the scenario
+            switch; the axis labels alone are not worth the height */}
+        <div
+          className={`mt-1 items-center justify-between text-[10px] tabular-nums text-[#898781] ${
+            projection && !monthMode ? "flex" : "hidden sm:flex"
+          }`}
+        >
           <span>{monthMode && monthlyInfo ? monthlyInfo.firstYear : sliderMin}</span>
           {monthMode && monthlyInfo ? (
             <span>{monthlyInfo.unit}</span>
@@ -2791,7 +2853,7 @@ export function MapExplorer({
       </div>
 
       {/* Story player overlay */}
-      {activeStory && (
+      {activeStory && !uiHidden && (
         <StoryPlayer
           story={activeStory}
           step={storyStep}

@@ -2,7 +2,18 @@
 Updated: 2026-07-16 (evening) | Branch: main (in sync with origin) | Dev port: 3300
 Remote: https://github.com/AvallenSolutions/earth-pulse (private)
 
-## Latest: Phase 8.0 — sky pack (pushed)
+## Latest: Phase 8.1 — UI tidy-up (pushed)
+Desktop overlap fixes (Live layers panel scrolls internally under a max-h;
+header/story chips constrained to lg:max-w-[23rem]; Map data panel moved to
+top-[10.5rem]; Find my sky restructured to two lines) and a mobile redesign:
+slim single-row vitals (details now tooltip-only), one compact metric pill
+instead of the legend block, slimmer slider (axis row only when scenario
+chips need it), and a "Clear view" eye toggle (uiHidden state) that hides
+all chrome for a full-screen sky. MapLibre's compact attribution is
+collapsed on load (class removal) so it never squats over small screens.
+Verified at 375x812 and 1280x800.
+
+## Phase 8.0 — sky pack (pushed)
 Five features on top of the real-sky engine:
 1. src/lib/ephemeris.ts: Sun/Moon/planets (JPL Keplerian elements + Meeus
    moon). Sun dec verified against the ISS API's subsolar latitude.
