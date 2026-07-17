@@ -329,9 +329,11 @@ export function SkySimulator({
   );
   const [guides, setGuides] = useState(true);
   const [month, setMonth] = useState(0);
-  // On phones the readouts collapse so the sky is not buried under the card;
-  // on sm+ screens the detail grid always shows (sm: classes below)
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  // The readout card can be minimised to just the slider so the full sky
+  // shows on any screen. Open by default on desktop, collapsed on phones.
+  const [detailsOpen, setDetailsOpen] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches
+  );
   const initialFacing = viewerLat >= -10 ? 180 : 0;
   const [facingWord, setFacingWord] = useState(compassWord(initialFacing));
   // Bumped whenever the async sky rebuild lands, so the checklist and other
@@ -900,19 +902,22 @@ export function SkySimulator({
 
       <div className="absolute inset-x-0 bottom-0 z-10 mx-auto w-[min(720px,94%)] pb-4">
         <div className="rounded-2xl border border-white/15 bg-[#141413]/85 p-3 shadow-2xl backdrop-blur sm:p-4">
-          {/* Mobile summary + expand toggle; the full grid is always shown on
-              sm+ so this row is hidden there */}
-          <div className="mb-2 flex items-center justify-between gap-2 sm:hidden">
-            <span className="min-w-0 truncate text-sm text-white">
-              <span className="font-semibold">{band.label}</span>
-              <span className="text-[#c3c2b7]"> · about {formatStarCount(starCount)} stars</span>
-            </span>
+          {/* Minimise / expand the readouts (all screens) so the sky can be
+              seen in full; when minimised, show the essentials inline */}
+          <div className="mb-2 flex items-center gap-2">
+            {!detailsOpen && (
+              <span className="min-w-0 truncate text-sm text-white">
+                <span className="font-semibold">{band.label}</span>
+                <span className="text-[#c3c2b7]"> · about {formatStarCount(starCount)} stars</span>
+              </span>
+            )}
             <button
               onClick={() => setDetailsOpen((o) => !o)}
               aria-expanded={detailsOpen}
-              className="shrink-0 rounded-full border border-white/15 px-2.5 py-0.5 text-[11px] text-[#c3c2b7]"
+              aria-label={detailsOpen ? "Minimise the panel" : "Expand the panel"}
+              className="ml-auto shrink-0 rounded-full border border-white/15 px-2.5 py-0.5 text-[11px] text-[#c3c2b7] transition-colors hover:text-white"
             >
-              {detailsOpen ? "Less ▾" : "More ▸"}
+              {detailsOpen ? "Minimise ▾" : "Expand ▴"}
             </button>
           </div>
           <input
@@ -940,7 +945,7 @@ export function SkySimulator({
 
           <div
             aria-live="polite"
-            className={`mt-3 gap-3 sm:grid sm:grid-cols-2 ${detailsOpen ? "grid" : "hidden"}`}
+            className={`mt-3 gap-3 sm:grid-cols-2 ${detailsOpen ? "grid" : "hidden"}`}
           >
             <div>
               <div className="flex items-center justify-between gap-2">
@@ -1059,7 +1064,7 @@ export function SkySimulator({
             </div>
           </div>
         </div>
-        <p className={`mt-1.5 text-center text-[10px] leading-snug text-[#898781] ${detailsOpen ? "" : "hidden sm:block"}`}>
+        <p className={`mt-1.5 text-center text-[10px] leading-snug text-[#898781] ${detailsOpen ? "" : "hidden"}`}>
           Sky quality:{" "}
           <a
             href="https://djlorenz.github.io/astronomy/lp2024/"
