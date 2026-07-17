@@ -329,6 +329,9 @@ export function SkySimulator({
   );
   const [guides, setGuides] = useState(true);
   const [month, setMonth] = useState(0);
+  // On phones the readouts collapse so the sky is not buried under the card;
+  // on sm+ screens the detail grid always shows (sm: classes below)
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const initialFacing = viewerLat >= -10 ? 180 : 0;
   const [facingWord, setFacingWord] = useState(compassWord(initialFacing));
   // Bumped whenever the async sky rebuild lands, so the checklist and other
@@ -875,17 +878,20 @@ export function SkySimulator({
         ✕
       </button>
 
-      <div className="pointer-events-none absolute left-4 top-4 z-10">
-        <h2 className="text-lg font-semibold tracking-tight text-white">
+      <div className="pointer-events-none absolute left-4 right-16 top-4 z-10">
+        <h2 className="text-base font-semibold tracking-tight text-white sm:text-lg">
           {mine
             ? "Your night sky"
             : cityName
               ? `The night sky over ${cityName}`
               : "Night sky simulator"}
         </h2>
-        <p className="text-sm text-[#c3c2b7]">
+        <p className="hidden text-sm text-[#c3c2b7] sm:block">
           The real sky for this latitude on a clear {MONTHS[month]} evening.
           Drag to look around · facing {facingWord}.
+        </p>
+        <p className="text-xs text-[#c3c2b7] sm:hidden">
+          Drag to look around · facing {facingWord}
         </p>
         {!skyReady && (
           <p className="mt-1 text-xs text-[#898781]">Loading the stars…</p>
@@ -893,7 +899,22 @@ export function SkySimulator({
       </div>
 
       <div className="absolute inset-x-0 bottom-0 z-10 mx-auto w-[min(720px,94%)] pb-4">
-        <div className="rounded-2xl border border-white/15 bg-[#141413]/85 p-4 shadow-2xl backdrop-blur">
+        <div className="rounded-2xl border border-white/15 bg-[#141413]/85 p-3 shadow-2xl backdrop-blur sm:p-4">
+          {/* Mobile summary + expand toggle; the full grid is always shown on
+              sm+ so this row is hidden there */}
+          <div className="mb-2 flex items-center justify-between gap-2 sm:hidden">
+            <span className="min-w-0 truncate text-sm text-white">
+              <span className="font-semibold">{band.label}</span>
+              <span className="text-[#c3c2b7]"> · about {formatStarCount(starCount)} stars</span>
+            </span>
+            <button
+              onClick={() => setDetailsOpen((o) => !o)}
+              aria-expanded={detailsOpen}
+              className="shrink-0 rounded-full border border-white/15 px-2.5 py-0.5 text-[11px] text-[#c3c2b7]"
+            >
+              {detailsOpen ? "Less ▾" : "More ▸"}
+            </button>
+          </div>
           <input
             type="range"
             min={MPSAS_MIN}
@@ -917,7 +938,10 @@ export function SkySimulator({
             ))}
           </div>
 
-          <div aria-live="polite" className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div
+            aria-live="polite"
+            className={`mt-3 gap-3 sm:grid sm:grid-cols-2 ${detailsOpen ? "grid" : "hidden"}`}
+          >
             <div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-white">{band.label}</span>
@@ -1035,7 +1059,7 @@ export function SkySimulator({
             </div>
           </div>
         </div>
-        <p className="mt-1.5 text-center text-[10px] leading-snug text-[#898781]">
+        <p className={`mt-1.5 text-center text-[10px] leading-snug text-[#898781] ${detailsOpen ? "" : "hidden sm:block"}`}>
           Sky quality:{" "}
           <a
             href="https://djlorenz.github.io/astronomy/lp2024/"
