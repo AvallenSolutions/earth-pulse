@@ -229,18 +229,49 @@ export type SkyObject = {
   dec: number;
   /** Sky brightness (mpsas) needed to see it with the naked eye */
   minMpsas: number;
-  kind: "galaxy" | "nebula" | "cluster" | "asterism";
+  kind: "galaxy" | "nebula" | "cluster" | "asterism" | "cloud";
+  /** How iconic it is, lowest first: picks what a place's checklist shows */
+  rank: number;
+  /** Longer name for the checklist, where there is room to explain */
+  checklistLabel?: string;
 };
 
-/** The showpieces the simulator draws and labels. The Plough and Southern
- *  Cross are made of catalogue stars; the label sits on their centroid. */
+/** The showpieces the simulator draws and labels, north and south. The
+ *  Plough, Southern Cross and galactic core sit on the star field or the
+ *  Milky Way band, so they carry a label rather than a drawn glow. */
 export const SKY_OBJECTS: SkyObject[] = [
-  { id: "m31", label: "Andromeda galaxy", ra: 10.685, dec: 41.269, minMpsas: 19.5, kind: "galaxy" },
-  { id: "m42", label: "Orion Nebula", ra: 83.822, dec: -5.391, minMpsas: 18.0, kind: "nebula" },
-  { id: "m45", label: "Pleiades", ra: 56.75, dec: 24.117, minMpsas: 17.0, kind: "cluster" },
-  { id: "plough", label: "The Plough", ra: 183.0, dec: 57.03, minMpsas: 17.4, kind: "asterism" },
-  { id: "crux", label: "Southern Cross", ra: 186.6, dec: -60.2, minMpsas: 17.0, kind: "asterism" },
-  { id: "carina", label: "Carina Nebula", ra: 161.265, dec: -59.868, minMpsas: 19.0, kind: "nebula" },
+  {
+    id: "core",
+    label: "Milky Way core",
+    checklistLabel: "The bright heart of the Milky Way",
+    ra: 266.4, dec: -29.0, minMpsas: 20.3, kind: "asterism", rank: 1,
+  },
+  { id: "crux", label: "Southern Cross", ra: 186.6, dec: -60.2, minMpsas: 17.0, kind: "asterism", rank: 2 },
+  {
+    id: "plough", label: "The Plough",
+    checklistLabel: "All seven stars of the Plough",
+    ra: 183.0, dec: 57.03, minMpsas: 17.4, kind: "asterism", rank: 2,
+  },
+  {
+    id: "m42", label: "Orion Nebula",
+    checklistLabel: "The Orion Nebula as a fuzzy glow",
+    ra: 83.822, dec: -5.391, minMpsas: 18.0, kind: "nebula", rank: 3,
+  },
+  {
+    id: "m31", label: "Andromeda galaxy",
+    checklistLabel: "The Andromeda galaxy with the naked eye",
+    ra: 10.685, dec: 41.269, minMpsas: 19.5, kind: "galaxy", rank: 3,
+  },
+  {
+    id: "lmc", label: "Large Magellanic Cloud",
+    ra: 80.894, dec: -69.756, minMpsas: 20.0, kind: "cloud", rank: 4,
+  },
+  { id: "carina", label: "Carina Nebula", ra: 161.265, dec: -59.868, minMpsas: 19.0, kind: "nebula", rank: 5 },
+  { id: "m45", label: "Pleiades", ra: 56.75, dec: 24.117, minMpsas: 17.0, kind: "cluster", rank: 5 },
+  {
+    id: "smc", label: "Small Magellanic Cloud",
+    ra: 13.187, dec: -72.829, minMpsas: 20.5, kind: "cloud", rank: 6,
+  },
 ];
 
 /** Compass word for an azimuth: "south-east" etc. */

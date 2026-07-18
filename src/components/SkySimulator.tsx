@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ATLAS_YEARS,
   SKY_BANDS,
-  SKY_FEATURES,
   bandFor,
   formatStarCount,
   nelm,
@@ -270,34 +269,39 @@ function lerpRgb(from: [number, number, number], to: [number, number, number], g
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
-/** Checklist status for a named feature at this latitude and evening. */
-function featureStatus(
-  label: string,
-  minMpsas: number,
-  mpsas: number,
+/**
+ * The checklist, built for this place and evening: only sights actually
+ * above the horizon tonight, most iconic first. A July evening in Auckland
+ * offers the galactic core and the Southern Cross; a January one in
+ * Edinburgh offers Orion and the Plough. Each row then says whether this
+ * sky's brightness still lets you see it.
+ */
+function localHighlights(
   objects: PlacedObject[] | null,
-  lat: number
-): { symbol: string; note: string; dimmed: boolean } {
-  const ids: Record<string, string> = {
-    "The Milky Way": "",
-    "The Andromeda galaxy with the naked eye": "m31",
-    "The Orion Nebula as a fuzzy glow": "m42",
-    "All seven stars of the Plough": "plough",
-  };
-  const obj = objects?.find((o) => o.id === ids[label]);
-  if (obj) {
-    const maxAlt = 90 - Math.abs(lat - obj.dec);
-    if (maxAlt < 4)
-      return { symbol: "—", note: "never rises at this latitude", dimmed: true };
-    if (obj.alt < 3)
-      return { symbol: "—", note: "below the horizon this evening", dimmed: true };
-    if (mpsas >= minMpsas)
-      return { symbol: "✓", note: `${compassWord(obj.az)}`, dimmed: false };
-    return { symbol: "✕", note: "lost", dimmed: true };
+  mpsas: number
+): { key: string; label: string; visible: boolean; note: string }[] {
+  const rows = [
+    {
+      key: "milkyway",
+      label: "The Milky Way",
+      visible: mpsas >= 20.3,
+      note: "",
+    },
+  ];
+  if (!objects) return rows;
+  const up = objects
+    .filter((o) => o.alt > 5)
+    .sort((a, b) => a.rank - b.rank || a.minMpsas - b.minMpsas)
+    .slice(0, 4);
+  for (const o of up) {
+    rows.push({
+      key: o.id,
+      label: o.checklistLabel ?? o.label,
+      visible: mpsas >= o.minMpsas,
+      note: compassWord(o.az),
+    });
   }
-  return mpsas >= minMpsas
-    ? { symbol: "✓", note: "", dimmed: false }
-    : { symbol: "✕", note: "lost", dimmed: true };
+  return rows;
 }
 
 export function SkySimulator({
@@ -410,6 +414,19 @@ export function SkySimulator({
           g.addColorStop(1, "rgba(0,0,0,0)");
           ctx.fillStyle = g;
           ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        } else if (o.kind === "cloud") {
+          // Magellanic Clouds: big, soft, irregular patches of the southern sky
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.scale(1, 0.72);
+          const r = (o.id === "lmc" ? 3.2 : 2.2) * dppx;
+          const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+          g.addColorStop(0, `rgba(226,224,232,${(0.3 * gate).toFixed(3)})`);
+          g.addColorStop(0.55, `rgba(206,208,222,${(0.13 * gate).toFixed(3)})`);
+          g.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = g;
+          ctx.fillRect(-r, -r, r * 2, r * 2);
+          ctx.restore();
         } else if (o.kind === "cluster") {
           const r = 1.1 * dppx;
           const g = ctx.createRadialGradient(x, y, 0, x, y, r);
@@ -784,6 +801,13 @@ export function SkySimulator({
   const band = bandFor(mpsas);
   const limit = nelm(mpsas);
   const starCount = starsAboveHorizon(limit);
+  // Recomputed when the async sky build lands (skyVersion) and whenever the
+  // month or brightness changes, so the list always matches what is drawn
+  const highlights = useMemo(
+    () => localHighlights(skyRef.current?.objects ?? null, mpsas),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mpsas, skyVersion, month]
+  );
 
   // Postcard: composite the live canvas with a caption band and share it
   const savePostcard = useCallback(() => {
@@ -1012,24 +1036,16 @@ export function SkySimulator({
             </div>
             <div>
               <div className="text-[10px] font-semibold uppercase tracking-wider text-[#898781]">
-                What this sky still shows you
+                Up tonight{cityName ? ` over ${cityName}` : ""}
               </div>
               <ul className="mt-1.5 space-y-1 text-xs">
-                {SKY_FEATURES.map((f) => {
-                  const st = featureStatus(
-                    f.label,
-                    f.minMpsas,
-                    mpsas,
-                    skyRef.current?.objects ?? null,
-                    viewerLat
-                  );
-                  return (
-                    <li key={f.label} className={st.dimmed ? "text-[#52514e]" : "text-[#c3c2b7]"}>
-                      {st.symbol} {f.label}
-                      {st.note ? ` · ${st.note}` : ""}
-                    </li>
-                  );
-                })}
+                {highlights.map((h) => (
+                  <li key={h.key} className={h.visible ? "text-[#c3c2b7]" : "text-[#52514e]"}>
+                    {h.visible ? "✓ " : "✕ "}
+                    {h.label}
+                    {h.visible ? (h.note ? ` · ${h.note}` : "") : " · lost to light pollution"}
+                  </li>
+                ))}
               </ul>
 
               {yearsWithData.length > 1 && (
