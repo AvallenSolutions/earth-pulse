@@ -27,6 +27,7 @@ import {
   sunPosition,
   type MoonState,
 } from "@/lib/ephemeris";
+import { landmarkFor, type Landmark } from "@/lib/landmarks";
 
 /**
  * Full-screen night sky simulator, now the real sky: every star is a Yale
@@ -217,13 +218,22 @@ function makeRand(seed: number) {
   };
 }
 
-function paintSilhouette(W: number, H: number, horizonY: number): Silhouette {
+function paintSilhouette(
+  W: number,
+  H: number,
+  horizonY: number,
+  landmark: Landmark | null
+): Silhouette {
   const off = document.createElement("canvas");
   off.width = W;
   off.height = H;
   const ctx = off.getContext("2d")!;
   const rand = makeRand(0x1c0ffee5);
   ctx.fillStyle = "#030306";
+  ctx.strokeStyle = "#030306";
+  // Backdrop landmarks (mountains, bridges, hilltops) sit behind the
+  // treeline, which then covers their base seam
+  if (landmark?.backdrop) landmark.draw(ctx, W * 0.55, horizonY + 4, landmark.h * H);
   ctx.beginPath();
   ctx.moveTo(0, H);
   ctx.lineTo(0, horizonY);
@@ -244,7 +254,8 @@ function paintSilhouette(W: number, H: number, horizonY: number): Silhouette {
   ctx.fill();
   const windows: Silhouette["windows"] = [];
   const buildings = 4 + Math.floor(rand() * 2);
-  let bx = W * 0.38;
+  // The generic blocks step aside when an icon owns the skyline
+  let bx = W * (landmark && !landmark.backdrop ? 0.13 : 0.38);
   for (let i = 0; i < buildings; i++) {
     const bw = (0.02 + rand() * 0.05) * W;
     const bh = (0.03 + rand() * 0.07) * H;
@@ -261,6 +272,8 @@ function paintSilhouette(W: number, H: number, horizonY: number): Silhouette {
           });
     bx += bw + (0.004 + rand() * 0.012) * W;
   }
+  if (landmark && !landmark.backdrop)
+    landmark.draw(ctx, W * 0.63, horizonY + 4, landmark.h * H);
   return { layer: off, windows };
 }
 
@@ -703,7 +716,7 @@ export function SkySimulator({
       // Match vertical scale where possible; clamp the field of view so
       // narrow screens still see enough sky and wide ones are not absurd
       pxPerDegX = Math.max(W / 220, Math.min(W / 100, pxPerDegY));
-      silhouette = paintSilhouette(W, H, horizonY);
+      silhouette = paintSilhouette(W, H, horizonY, landmarkFor(cityName));
       paint();
     };
 

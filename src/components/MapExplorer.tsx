@@ -2128,6 +2128,13 @@ export function MapExplorer({
     []
   );
 
+  // Dev hook, like window.__map above: lets tooling drive the simulator
+  // without fighting the map's pointer pipeline
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development")
+      (window as unknown as { __openSky?: typeof openSky }).__openSky = openSky;
+  }, [openSky]);
+
   // Shared control bodies, reused in the desktop floating panels and the
   // mobile burger drawer so there is a single source of truth.
   const liveLayersBody = (
